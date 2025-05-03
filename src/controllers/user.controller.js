@@ -1,0 +1,133 @@
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import { User } from "../models/user.model.js";
+import { asyncHandler } from "../utills/asyncHandler.js";
+
+// Register controller
+const userRegister = asyncHandler(async (req, res) => {
+  const { username, email, password, contact  } = req.body;
+  if (!username || !email || !password || !contact) {
+    return res.status(400).json({ message: "Please provide all fields" });
+  }
+
+  const passwordRegex =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^+=])[A-Za-z\d@$!%*?&#^+=]{8,}$/;
+
+  if (!passwordRegex.test(password)) {
+    return res.status(400).json({
+      message:
+        "Password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character."
+    });
+  }
+
+  const existingUser = await User.findOne({ email });
+  if (existingUser)
+    return res.status(400).json({ message: "User already exists." });
+
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash(password, salt);
+
+  const user = new User({
+    username,
+    email,
+    password: hashedPassword,
+    contact,
+    
+  });
+
+  await user.save();
+  res.status(201).json({ message: "User registered successfully!" });
+});
+
+// Login controller
+const userLogin = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ message: "Please provide all fields" });
+  }
+
+  const user = await User.findOne({ email });
+  if (!user)
+    return res.status(400).json({ message: "Invalid email or password." });
+
+  const isMatch = await bcrypt.compare(password, user.password);
+  if (!isMatch)
+    return res.status(400).json({ message: "Invalid email or password." });
+
+  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET_KEY, {
+    expiresIn: "1d"
+  });
+  
+
+  console.log("from login", token);
+
+  res.status(200).json({
+    token,
+    user: {
+      id: user._id,
+      username: user.username,
+      email: user.email,
+      message: "login success"
+    }
+  });
+});
+
+//getuser by token
+const getUser = asyncHandler(async (req, res) => {
+  res.status(200).json({
+    user: req.user,
+    message: "User fetched successfully"
+  });
+});
+
+//updateprofile
+const updateUserProfile = asyncHandler(async (req, res) => {
+  const { username, email, contact, address } = req.body;
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    { username, email, contact, address },
+    { new: true }
+  );
+  res.status(200).json({ user, message: "User updated successfully" });
+})
+//forgot password
+const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ message: "Please provide email" });
+  }
+
+  const user = await User.findOne({ email });
+  if (!user) {
+    return res.status(400).json({ message: "User Not Found" });
+  }
+
+  const resetToken = user.getResetPasswordToken;
+
+  await user.save({ validateBeforeSave: false });
+
+  const resetUrl = `${req.protocol}://${req.get(
+    "host"
+  )}/api/v1/user/resetpassword/${resetToken}`;
+
+  const message = `You are receiving this email because you (or someone else) has requested the reset of a password. Please click on the following link: ${resetUrl}`;
+  try {
+    await sendEmail({
+      email: user.email,
+      subject: "Password reset request",
+      message
+    });
+    res.status(200).json({ success: true, message: "password is forget successfully and Email sent successfully" });
+  } catch (error) {
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+
+    await user.save({ validateBeforeSave: false });
+
+    return res
+      .status(500)
+      .json({ success: false, message: "Email could not be sent" });
+  }
+});
+
+export { userRegister, userLogin,  getUser,  updateUserProfile, forgotPassword };

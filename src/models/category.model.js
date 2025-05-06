@@ -20,6 +20,11 @@ const categorySchema = new mongoose.Schema({
       }
     }
   ],
+
+  approved: {
+    type: Boolean,
+    default: false
+  },
   products: [
     {
       type: mongoose.Schema.Types.ObjectId,

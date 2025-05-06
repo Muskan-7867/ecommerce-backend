@@ -168,8 +168,10 @@ export const deleteProduct = asyncHandler(async (req, res) => {
 //updateProduct
 export const updateProduct = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { name, description, price, features, Instock, category } =
+  const { name, description, price, features, inStock, category } =
     req.body;
+
+  console.log("from bakcend" , name, description, price, features, inStock, category)
 
   const product = await Product.findById(id);
   if (!product) {
@@ -182,7 +184,7 @@ export const updateProduct = asyncHandler(async (req, res) => {
   (product.description = description || product.description),
     (product.price = price || product.price),
     (product.features = features || product.features),
-    (product.inStock = Instock || product.inStock),
+    (product.inStock = inStock || product.inStock),
     (product.category = category || product.category),
     await product.save();
   res.status(200).json({

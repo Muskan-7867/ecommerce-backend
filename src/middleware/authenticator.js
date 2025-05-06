@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import { User } from "../models/user.model.js";
+
 const authenticator = async (req, res, next) => {
   const authHeader = req.headers.authorization;
  

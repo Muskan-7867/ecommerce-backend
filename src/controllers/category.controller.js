@@ -3,8 +3,8 @@ import { uploadMultipleImages } from "../utills/cloudinary.js";
 import { Category } from "../models/category.model.js";
 import fs from "fs";
 
-export const AddCategory = asyncHandler(async (req, res) => {
-  const { name, description, products } = req.body;
+ const AddCategory = asyncHandler(async (req, res) => {
+  const { name, description, products , approved} = req.body;
   console.log(" from name", name);
 
   if (!name || !description ) {
@@ -33,7 +33,8 @@ export const AddCategory = asyncHandler(async (req, res) => {
     name,
     description,
     products,
-    images
+    images,
+    approved
   });
 
   res.status(200).json({
@@ -43,8 +44,8 @@ export const AddCategory = asyncHandler(async (req, res) => {
   });
 });
 
-export const getAllCategories = asyncHandler(async (req, res) => {
-    const categories = await Category.find().populate("products");
+ const getAllCategoriesForUser = asyncHandler(async (req, res) => {
+    const categories = await Category.find({approved: true}).populate("products");
     return res.status(200).json({
         success:true,
         message: "All Categories are fetched successfully",
@@ -52,7 +53,25 @@ export const getAllCategories = asyncHandler(async (req, res) => {
     })
 })
 
-export const getProductByCategoryName = asyncHandler(async (req, res) => {
+const getAllCategoriesForAdmin = asyncHandler(async (req, res) => {
+  const categories = await Category.find().populate("products");
+  return res.status(200).json({
+      success:true,
+      message: "All Categories are fetched successfully",
+      categories
+  })
+})
+
+const getAllCategories = asyncHandler(async(req,res) => {
+  const categories = await Category.find().populate("products")
+  return res.status(200).json({
+    success: true,
+    message: "All Categories are fetched successfully",
+    categories
+  })
+});
+
+ const getProductByCategoryName = asyncHandler(async (req, res) => {
   const { name } = req.params;
   console.log("from category name", name);
 
@@ -75,7 +94,7 @@ export const getProductByCategoryName = asyncHandler(async (req, res) => {
 });
 
 
-export const getProductByCategoryId = asyncHandler(async (req, res) => {
+ const getProductByCategoryId = asyncHandler(async (req, res) => {
   const { Id } = req.params;
   console.log("from category id", Id);
 
@@ -96,3 +115,44 @@ export const getProductByCategoryId = asyncHandler(async (req, res) => {
     products: category.products,  
   });
 });
+
+const deleteCategory = asyncHandler(async(req, res) => {
+  const { id } = req.params;
+
+  const category = await Category.findByIdAndDelete(id);
+  if(!category){
+    return res.status(404).json({
+      success: false,
+      message: "Category not found",
+    })
+  }
+  
+
+  return res.status(200).json({
+    success: true,
+    message: "Category deleted successfully",
+  })
+})
+
+const getCategory = asyncHandler(async (req, res) => {
+  const { categoryId }  = req.params;
+  const category = await Category.findById(categoryId)
+  console.log( "from backend" , category)
+  if(!category){
+    return res.status(404).json({
+      success: false,
+      message: "Category not found",
+    })
+  }
+
+  category.approved = !category.approved;
+  await category.save();
+  return res.status(200).json({
+    success: true,
+    message: "Category fetched successfully",
+    category: category,
+  })
+ 
+})
+
+export { AddCategory, getAllCategoriesForUser, getAllCategoriesForAdmin, getProductByCategoryName, getProductByCategoryId , deleteCategory , getAllCategories, getCategory};

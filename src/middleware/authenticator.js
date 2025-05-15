@@ -3,8 +3,6 @@ import { User } from "../models/user.model.js";
 
 const authenticator = async (req, res, next) => {
   const authHeader = req.headers.authorization;
- 
-
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({ message: "No token provided" });
   }
@@ -14,8 +12,9 @@ const authenticator = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
     const user = await User.findById(decoded.id).select(
-      " username email role _id contact address"
+      "username email role _id contact address order"
     );
+    console.log("from auth", user)
 
     if (!user) return res.status(401).json({ message: "User not found" });
 

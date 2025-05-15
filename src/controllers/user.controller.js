@@ -2,6 +2,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { User } from "../models/user.model.js";
 import { asyncHandler } from "../utills/asyncHandler.js";
+import { Address } from "../models/address.model.js";
 
 // Register controller
 const userRegister = asyncHandler(async (req, res) => {
@@ -74,8 +75,10 @@ const userLogin = asyncHandler(async (req, res) => {
 
 //getuser by token
 const getUser = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user.id).select("-password").populate("address").populate("order");
+
   res.status(200).json({
-    user: req.user,
+    user: user,
     message: "User fetched successfully"
   });
 });
@@ -83,6 +86,7 @@ const getUser = asyncHandler(async (req, res) => {
 //updateprofile
 const updateUserProfile = asyncHandler(async (req, res) => {
   const { username, email, contact, address } = req.body;
+  
   const user = await User.findByIdAndUpdate(
     req.user._id,
     { username, email, contact, address },
@@ -90,6 +94,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
   );
   res.status(200).json({ user, message: "User updated successfully" });
 })
+
 //forgot password
 const forgotPassword = asyncHandler(async (req, res) => {
   const { email } = req.body;
@@ -130,4 +135,36 @@ const forgotPassword = asyncHandler(async (req, res) => {
   }
 });
 
-export { userRegister, userLogin,  getUser,  updateUserProfile, forgotPassword };
+
+
+const fetchUserAddressFromId = asyncHandler(async (req, res) => {
+  const { addressId } = req.params;
+
+  // Make sure to await the DB call
+  const address = await Address.findById(addressId);
+
+  // Check if address exists
+  if (!address) {
+    return res.status(404).json({
+      success: false,
+      message: "Address not found"
+    });
+  }
+
+  res.status(200).json({
+    success: true,
+    address
+  });
+});
+
+const getAllUsers = asyncHandler(async (req, res) => {
+  const users = await User.find().populate("order").populate("address");
+  res.status(200).json({
+    success: true,
+    users
+  })
+})
+
+
+
+export { userRegister, userLogin,  getUser,  updateUserProfile, forgotPassword , fetchUserAddressFromId, getAllUsers};

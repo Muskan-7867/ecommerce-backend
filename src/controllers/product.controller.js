@@ -125,8 +125,8 @@ export const getFilteredProducts = asyncHandler(async (req, res) => {
 
 //get product by single id
 export const getProductsById = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const product = await Product.findById(id);
+  const { singleproductid } = req.params;
+  const product = await Product.findById(singleproductid);
   console.log("from get", product);
   if (!product) {
     return res.json({

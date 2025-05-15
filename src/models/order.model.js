@@ -1,53 +1,62 @@
 import mongoose from "mongoose";
-const orderSchema = new mongoose.Schema({
-  quantity: {
-    type: Number,
-    required: true
-  },
 
-  client: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User"
-  },
+const orderSchema = new mongoose.Schema(
+  {
+    quantity: {
+      type: Number,
+      required: true
+    },
 
-  orderItems: [{
-    price: { type: Number, required: true },
-    quantity: { type: Number, required: true },
-    product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true }
-  }],
+    client: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
+    },
 
-  address: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Address",
-    required: true
-  },
-  
-  totalPrice : {
-    type: Number,
-    required: true
-  },
+    orderItems: [
+      {
+        product: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Product",
+          required: true
+        },
+        price: Number,
+        quantity: Number
+      }
+    ],
 
-  totalQuantity : {
-    type: Number,
-    required: true
-  },
+    address: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Address",
+      required: true
+    },
 
-  payment: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Payment"
-  },
+    totalPrice: {
+      type: Number,
+      required: true
+    },
 
-  isPaid: {
-    type: Boolean,
-    default: false
-  },
+    totalQuantity: {
+      type: Number,
+      required: true
+    },
 
-  status: {
-    type: String,
-    enum: ["pending", "shipped", "delivered", "cancelled"],
-    default: "pending"
+    payment: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Payment"
+    },
+
+    isPaid: {
+      type: Boolean,
+      default: false
+    },
+
+    status: {
+      type: String,
+      enum: ["pending", "processing", "delivered", "cancelled"],
+      default: "pending"
+    }
   },
-  
-}, { timestamps: true});
+  { timestamps: true }
+);
 
 export const Order = mongoose.model("Order", orderSchema);

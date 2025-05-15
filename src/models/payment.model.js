@@ -1,22 +1,24 @@
+import mongoose from "mongoose";
 
-const paymentSchema = new mongoose.Schema({
-    userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
-    },
+const PaymentSchema = new mongoose.Schema(
+  {
     amount: {
-        type: Number,
-        required: true
+      type: Number,
+      required: true
     },
+
     paymentMethod: {
-        type: String,
-        required: true
+      type: String,
+      default: "Cash on Delivery",
+      required: true
     },
     paymentStatus: {
-        type: String,
-        default: 'pending'
-    },
-})
+      type: String,
+      default: "Pending",
+      required: true
+    }
+  },
+  { timestamps: true }
+);
 
-export const Payment = mongoose.model("Payment", paymentSchema);
+export const Payemnt = mongoose.model("Payment" , PaymentSchema)

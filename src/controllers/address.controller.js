@@ -2,21 +2,15 @@ import { Address } from "../models/address.model.js";
 import { User } from "../models/user.model.js";
 import { asyncHandler } from "../utills/asyncHandler.js";
 
-export const userAddress = asyncHandler(async (req, res) => {
+const createAddress = asyncHandler(async (req, res) => {
   const userId = req.userId;
-  console.log("userid", userId);
 
   const { phone, street, city, state, pincode, address, address1, country } =
     req.body;
+
   if (
-    !phone ||
-    !street ||
-    !city ||
-    !state ||
-    !pincode ||
-    !address ||
-    !address1 ||
-    !country
+    !phone || !street || !city || !state ||
+    !pincode || !address  || !country
   ) {
     return res.status(400).json({
       success: false,
@@ -25,16 +19,6 @@ export const userAddress = asyncHandler(async (req, res) => {
   }
 
   try {
-    const newAddress = await Address.create({
-      street: street,
-      city: city,
-      state: state,
-      country: country,
-      address: address,
-      address1: address1,
-      pincode: Number(pincode),
-      phone: Number(phone)
-    });
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
@@ -42,6 +26,41 @@ export const userAddress = asyncHandler(async (req, res) => {
         message: "User not found"
       });
     }
+
+    // Update if address exists
+    if (user.address) {
+      const existingAddress = await Address.findById(user.address);
+      if (existingAddress) {
+        existingAddress.street = street;
+        existingAddress.city = city;
+        existingAddress.state = state;
+        existingAddress.country = country;
+        existingAddress.address = address;
+        existingAddress.address1 = address1;
+        existingAddress.pincode = Number(pincode);
+        existingAddress.phone = Number(phone);
+        await existingAddress.save();
+
+        return res.status(200).json({
+          success: true,
+          message: "Address updated successfully",
+          data: existingAddress
+        });
+      }
+    }
+
+    // Create new address
+    const newAddress = await Address.create({
+      street,
+      city,
+      state,
+      country,
+      address,
+      address1,
+      pincode: Number(pincode),
+      phone: Number(phone)
+    });
+
     user.address = newAddress._id;
     await user.save();
 
@@ -50,12 +69,16 @@ export const userAddress = asyncHandler(async (req, res) => {
       message: "Address added successfully",
       data: newAddress
     });
+
   } catch (error) {
-    console.error("Error creating address:", error);
+    console.error("Error creating/updating address:", error);
     return res.status(500).json({
       success: false,
-      message: "Failed to create address",
+      message: "Failed to process address",
       error: error.message
     });
   }
 });
+
+
+export { createAddress };

@@ -18,12 +18,10 @@ export const createProduct = asyncHandler(async (req, res) => {
     return res.status(400).json({ error: "Please upload at least one image" });
   }
 
-  const filePaths = req.files.map((file) => file.path);
+ let filePaths;
+try {
+  filePaths = req.files.map((file) => file.path);
   const uploadResults = await uploadMultipleImages(filePaths, "uploads");
-
-  req.files.forEach((file) => {
-    fs.unlinkSync(file.path);
-  });
 
   const images = uploadResults.map((result) => ({
     publicId: result.public_id,
@@ -38,17 +36,14 @@ export const createProduct = asyncHandler(async (req, res) => {
     images,
     inStock,
     originalPrice,
-    
-    category: category
+    category
   });
 
-  console.log("from createproducts---- ", product);
-
-  const productCategory = await Category.findOne({ _id: category });
+  const productCategory = await Category.findById(category);
   if (!productCategory) {
     return res.status(404).json({ error: "Category not found" });
   }
-  console.log("from createproducts----", productCategory);
+
   productCategory.products.push(product._id);
   await productCategory.save();
 
@@ -57,9 +52,19 @@ export const createProduct = asyncHandler(async (req, res) => {
     message: "Product created successfully",
     product
   });
+} finally {
+  if (filePaths) {
+    filePaths.forEach((filePath) => {
+      try {
+        fs.unlinkSync(filePath);
+      } catch (err) {
+        console.warn("Error deleting temp file:", err.message);
+      }
+    });
+  }
+}
 });
 
-//getproducts
 // Controller Function - Get All Products
 export const getAllProducts = asyncHandler(async (req, res) => {
   try {
@@ -80,48 +85,38 @@ export const getAllProducts = asyncHandler(async (req, res) => {
 
 
 export const getFilteredProducts = asyncHandler(async (req, res) => {
-  // const { maxprice, minprice, page, limit} = req.params;
   const maxPrice = Number(req.params.maxPrice) || 100000000;
   const minPrice = Number(req.params.minPrice) || 0;
   const limit = Number(req.params.limit) || 9;
   const page = Number(req.params.page) || 1;
   const categoryId = req.params.category || "all";
   const search = req.params.search;
-
-  console.log(
-    "from router",
-    minPrice,
-    maxPrice,
-    limit,
-    page,
-    categoryId,
-    search
-  );
   const filter = {
     price: { $gte: minPrice, $lte: maxPrice }
   };
-  if (categoryId) {
-    if (categoryId !== "all") {
-      filter.category = categoryId;
-    }
+
+  if (categoryId !== "all") {
+    filter.category = categoryId;
   }
 
   if (search && !search.startsWith("-")) {
     filter.name = { $regex: search, $options: "i" };
   }
-
-  const product = await Product.find(filter)
+  const products = await Product.find(filter)
+    .populate("category", "name")
     .skip((page - 1) * limit)
     .limit(limit);
 
   const totalProduct = await Product.countDocuments(filter);
+
   return res.status(200).json({
-    succes: true,
-    message: "products fetch successfully",
+    success: true,
+    message: products.length > 0 ? "Products fetched successfully" : "No products matched the filters.",
     totalProduct,
-    product
+    products
   });
 });
+
 
 //get product by single id
 export const getProductsById = asyncHandler(async (req, res) => {

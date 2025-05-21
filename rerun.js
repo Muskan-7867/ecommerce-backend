@@ -1,5 +1,7 @@
-import axios from "axios"
-export async function rerunMachine ()  {
- const data =  await axios.get("https://omeg-backend.onrender.com")
- console.log(data.data)
+import axios from "axios";
+export async function rerunMachine() {
+  try {
+    const data = await axios.get("https:google.com");
+  } catch (error) {}
+  console.log(data);
 }

@@ -23,7 +23,7 @@ app.use(cors(corsOptions));
 
 
 app.use(mainRouter)
-setInterval(rerunMachine, 60000);
+// setInterval(rerunMachine, 60000);
 
 app.get('/', (req, res) => {
   res.send('Hello Worlddd!!');

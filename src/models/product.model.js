@@ -42,6 +42,9 @@ const productSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Category",
     
+  },
+  deliveryCharges: {
+    type: Number,
   }
 });
 export const Product = mongoose.model("Product", productSchema);

@@ -41,13 +41,24 @@ const orderSchema = new mongoose.Schema(
     },
 
     payment: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Payment"
+      razorpay_order_id: String,
+      razorpay_payment_id: String,
+      razorpay_signature: String,
+      status: {
+        type: String,
+        enum: ["Pending", "Success", "Failed"],
+        default: "Pending"
+      }
     },
 
     isPaid: {
       type: Boolean,
       default: false
+    },
+
+    deliveryCharges: {
+      type: Number,
+      default: 0
     },
 
     status: {

@@ -19,6 +19,11 @@ const adminSchema = new mongoose.Schema({
     required: true,
     default: "admin",
   },
+  totalProducts :{
+    type: Number,
+    default: 0,
+    
+  }
 })
 
 export const Admin = mongoose.model("Admin", adminSchema);

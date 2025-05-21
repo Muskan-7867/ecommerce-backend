@@ -6,7 +6,7 @@ import { deleteMultipleImages, uploadMultipleImages } from "../utills/cloudinary
 
 //createproduct
 export const createProduct = asyncHandler(async (req, res) => {
-  const { name, description, price, features, originalPrice, category , inStock} = req.body;
+  const { name, description, price, features, originalPrice, category , inStock, deliveryCharges } = req.body;
 
   if (!name || !description || !price || !features) {
     return res
@@ -36,7 +36,8 @@ try {
     images,
     inStock,
     originalPrice,
-    category
+    category,
+    deliveryCharges
   });
 
   const productCategory = await Category.findById(category);
@@ -166,7 +167,7 @@ export const updateProduct = asyncHandler(async (req, res) => {
   const { name, description, price, features, inStock, category } =
     req.body;
 
-  console.log("from bakcend" , name, description, price, features, inStock, category)
+  console.log("from bakcend" , name, description, price, features, inStock, category, deliveryCharges)
 
   const product = await Product.findById(id);
   if (!product) {
@@ -181,6 +182,7 @@ export const updateProduct = asyncHandler(async (req, res) => {
     (product.features = features || product.features),
     (product.inStock = inStock || product.inStock),
     (product.category = category || product.category),
+    (product.deliveryCharges = deliveryCharges || product.deliveryCharges);
     await product.save();
   res.status(200).json({
     success: true,

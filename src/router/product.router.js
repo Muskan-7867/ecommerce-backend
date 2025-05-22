@@ -16,8 +16,7 @@ getAllCategoriesForUser,
  getProductByCategoryId,
 getProductByCategoryName
 }from "../controllers/category.controller.js";
-import {  createRazorPayOrder, deleteOrderById, getOrderProducts, newOrder,  paymentVerify } from "../controllers/order.controller.js";
-import { authenticator } from "../middleware/authenticator.js"
+
 
 export const productRouter = Router();
 
@@ -35,13 +34,7 @@ productRouter.get("/categories", getAllCategories);
 productRouter.get("/category/:categoryId", getCategory);
 productRouter.get("/admincategories", getAllCategoriesForAdmin);
 productRouter.get("/category/name/:name", getProductByCategoryName);
-// productRouter.post("/order", authenticator , orderProduct);
-productRouter.post("/razorpayorder", authenticator, createRazorPayOrder);
-productRouter.delete("/order/delete/:orderid", deleteOrderById);
-productRouter.get("/orderproducts", authenticator , getOrderProducts);
-productRouter.post("/paymentverify", authenticator, paymentVerify);
 
-productRouter.post("/order/create",  newOrder);
 
 
 

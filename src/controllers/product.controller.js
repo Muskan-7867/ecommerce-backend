@@ -164,7 +164,7 @@ export const deleteProduct = asyncHandler(async (req, res) => {
 //updateProduct
 export const updateProduct = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { name, description, price, features, inStock, category } =
+  const { name, description, price, features, inStock, category , deliveryCharges} =
     req.body;
 
   console.log("from bakcend" , name, description, price, features, inStock, category, deliveryCharges)

@@ -158,7 +158,7 @@ const fetchUserAddressFromId = asyncHandler(async (req, res) => {
 });
 
 const getAllUsers = asyncHandler(async (req, res) => {
-  const users = await User.find().populate("order").populate("address");
+  const users = await User.find().select('-password').populate("order.products").populate("address");
   res.status(200).json({
     success: true,
     users

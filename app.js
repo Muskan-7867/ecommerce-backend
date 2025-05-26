@@ -15,7 +15,7 @@ const port = 3000;
 connectDB();
 
 const corsOptions ={
-    origin: ["http://localhost:5173" , process.env.VITE_BASE_URL],
+    origin: [ "https://ecommerc-eomeg.vercel.app/" , "http://localhost:5173" ],
     credentials:true,           
     optionSuccessStatus:200
 }

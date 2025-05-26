@@ -8,6 +8,6 @@ orderRouter.post("/razorpayorder", authenticator, createRazorPayOrder);
 orderRouter.delete("/delete/:orderid", deleteOrderById);
 orderRouter.get("/products", authenticator , getOrderProducts);
 orderRouter.post("/paymentverify", authenticator, paymentVerify);
-orderRouter.post("/create",  newOrder);
+orderRouter.post("/create", authenticator,  newOrder);
 orderRouter.post("/cartrazorpayorder", authenticator,  createRazorPayOrderOfCart);
 orderRouter.get("/client/:orderId",  getClientByOrderId);

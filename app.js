@@ -15,7 +15,7 @@ const port = 3000;
 connectDB();
 
 const corsOptions ={
-    origin: process.env.VITE_BASE_URL,
+    origin: ["http://localhost:5173" , process.env.VITE_BASE_URL],
     credentials:true,           
     optionSuccessStatus:200
 }

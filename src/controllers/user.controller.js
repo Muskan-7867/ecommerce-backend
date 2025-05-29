@@ -6,14 +6,22 @@ import { Address } from "../models/address.model.js";
 
 // Register controller
 const userRegister = asyncHandler(async (req, res) => {
-  const { username, email, password  } = req.body;
-  if (!username || !email || !password ) {
-    return res.status(400).json({ message: "Please provide all fields" });
+  const { username, email, password } = req.body;
+
+  // Check for missing fields
+  if (!username || !email || !password) {
+    return res.status(400).json({ message: "Please provide all fields." });
   }
 
+  // Basic email format validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ message: "Invalid email format." });
+  }
+
+  // Password strength validation
   const passwordRegex =
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^+=])[A-Za-z\d@$!%*?&#^+=]{8,}$/;
-
   if (!passwordRegex.test(password)) {
     return res.status(400).json({
       message:
@@ -21,24 +29,40 @@ const userRegister = asyncHandler(async (req, res) => {
     });
   }
 
+  // Check if user already exists
   const existingUser = await User.findOne({ email });
-  if (existingUser)
+  if (existingUser) {
     return res.status(400).json({ message: "User already exists." });
+  }
 
+  // Hash the password
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(password, salt);
 
-  const user = new User({
+  // Create and save the user
+  const user = await User.create({
     username,
     email,
-    password: hashedPassword,
-   
-    
+    password: hashedPassword
   });
 
-  await user.save();
-  res.status(201).json({ message: "User registered successfully!" });
+  // Generate JWT token
+  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET_KEY, {
+    expiresIn: "1d"
+  });
+
+  // Respond with token and user info
+  res.status(201).json({
+    message: "User registered successfully!",
+    token,
+    user: {
+      id: user._id,
+      username: user.username,
+      email: user.email
+    }
+  });
 });
+
 
 // Login controller
 const userLogin = asyncHandler(async (req, res) => {
@@ -58,7 +82,6 @@ const userLogin = asyncHandler(async (req, res) => {
   const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET_KEY, {
     expiresIn: "1d"
   });
-  
 
   console.log("from login", token);
 
@@ -75,7 +98,10 @@ const userLogin = asyncHandler(async (req, res) => {
 
 //getuser by token
 const getUser = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user.id).select("-password").populate("address").populate("order");
+  const user = await User.findById(req.user.id)
+    .select("-password")
+    .populate("address")
+    .populate("order");
 
   res.status(200).json({
     user: user,
@@ -86,14 +112,14 @@ const getUser = asyncHandler(async (req, res) => {
 //updateprofile
 const updateUserProfile = asyncHandler(async (req, res) => {
   const { username, email, contact, address } = req.body;
-  
+
   const user = await User.findByIdAndUpdate(
     req.user._id,
     { username, email, contact, address },
     { new: true }
   );
   res.status(200).json({ user, message: "User updated successfully" });
-})
+});
 
 //forgot password
 const forgotPassword = asyncHandler(async (req, res) => {
@@ -122,7 +148,12 @@ const forgotPassword = asyncHandler(async (req, res) => {
       subject: "Password reset request",
       message
     });
-    res.status(200).json({ success: true, message: "password is forget successfully and Email sent successfully" });
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: "password is forget successfully and Email sent successfully"
+      });
   } catch (error) {
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
@@ -134,8 +165,6 @@ const forgotPassword = asyncHandler(async (req, res) => {
       .json({ success: false, message: "Email could not be sent" });
   }
 });
-
-
 
 const fetchUserAddressFromId = asyncHandler(async (req, res) => {
   const { addressId } = req.params;
@@ -158,13 +187,22 @@ const fetchUserAddressFromId = asyncHandler(async (req, res) => {
 });
 
 const getAllUsers = asyncHandler(async (req, res) => {
-  const users = await User.find().select('-password').populate("order.products").populate("address");
+  const users = await User.find()
+    .select("-password")
+    .populate("order.products")
+    .populate("address");
   res.status(200).json({
     success: true,
     users
-  })
-})
+  });
+});
 
-
-
-export { userRegister, userLogin,  getUser,  updateUserProfile, forgotPassword , fetchUserAddressFromId, getAllUsers};
+export {
+  userRegister,
+  userLogin,
+  getUser,
+  updateUserProfile,
+  forgotPassword,
+  fetchUserAddressFromId,
+  getAllUsers
+};

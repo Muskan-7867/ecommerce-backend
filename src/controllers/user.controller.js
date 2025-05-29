@@ -6,8 +6,8 @@ import { Address } from "../models/address.model.js";
 
 // Register controller
 const userRegister = asyncHandler(async (req, res) => {
-  const { username, email, password, contact  } = req.body;
-  if (!username || !email || !password || !contact) {
+  const { username, email, password  } = req.body;
+  if (!username || !email || !password ) {
     return res.status(400).json({ message: "Please provide all fields" });
   }
 
@@ -32,7 +32,7 @@ const userRegister = asyncHandler(async (req, res) => {
     username,
     email,
     password: hashedPassword,
-    contact,
+   
     
   });
 

@@ -19,7 +19,7 @@ export const createProduct = asyncHandler(async (req, res) => {
   }
 
  let filePaths;
-try {
+ try {
   filePaths = req.files.map((file) => file.path);
   const uploadResults = await uploadMultipleImages(filePaths, "uploads");
 

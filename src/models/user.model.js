@@ -20,11 +20,7 @@ const userSchema = new mongoose.Schema(
       minlength: 6
     },
     
-    contact: {
-      type: String,
-      required: true,
-      minlength: 10
-    },
+  
     role: {
       type: String,
       enum: ["admin", "user"],

@@ -15,7 +15,7 @@ const port = 3000;
 connectDB();
 
 const corsOptions ={
-    origin: "https://ecommerc-eomeg.vercel.app/",
+    origin: "https://ecommerc-eomeg.vercel.app",
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials:true,           
     optionSuccessStatus:200,

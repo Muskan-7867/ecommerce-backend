@@ -3,10 +3,11 @@ import { Product } from "../models/product.model.js";
 import { asyncHandler } from "../utills/asyncHandler.js";
 import fs from "fs";
 import { deleteMultipleImages, uploadMultipleImages } from "../utills/cloudinary.js";
+import mongoose from "mongoose";
 
 //createproduct
 export const createProduct = asyncHandler(async (req, res) => {
-  const { name, description, price, features, originalPrice, category , inStock, deliveryCharges } = req.body;
+  const { name, description, price, features, originalPrice, category, inStock, deliveryCharges } = req.body;
 
   if (!name || !description || !price || !features) {
     return res
@@ -18,52 +19,62 @@ export const createProduct = asyncHandler(async (req, res) => {
     return res.status(400).json({ error: "Please upload at least one image" });
   }
 
- let filePaths;
- try {
-  filePaths = req.files.map((file) => file.path);
-  const uploadResults = await uploadMultipleImages(filePaths, "uploads");
-
-  const images = uploadResults.map((result) => ({
-    publicId: result.public_id,
-    url: result.secure_url
-  }));
-
-  const product = await Product.create({
-    name,
-    description,
-    price,
-    features,
-    images,
-    inStock,
-    originalPrice,
-    category,
-    deliveryCharges
-  });
-
-  const productCategory = await Category.findById(category);
-  if (!productCategory) {
-    return res.status(404).json({ error: "Category not found" });
+  // Only validate category if it's provided and not empty
+  if (category && !mongoose.Types.ObjectId.isValid(category)) {
+    return res
+      .status(400)
+      .json({ error: "Invalid category. Please select a valid one or leave it empty." });
   }
 
-  productCategory.products.push(product._id);
-  await productCategory.save();
+  let filePaths;
+  try {
+    filePaths = req.files.map((file) => file.path);
+    const uploadResults = await uploadMultipleImages(filePaths, "uploads");
 
-  res.status(201).json({
-    success: true,
-    message: "Product created successfully",
-    product
-  });
-} finally {
-  if (filePaths) {
-    filePaths.forEach((filePath) => {
-      try {
-        fs.unlinkSync(filePath);
-      } catch (err) {
-        console.warn("Error deleting temp file:", err.message);
-      }
+    const images = uploadResults.map((result) => ({
+      publicId: result.public_id,
+      url: result.secure_url
+    }));
+
+    const product = await Product.create({
+      name,
+      description,
+      price,
+      features,
+      images,
+      inStock,
+      originalPrice,
+      category: category || undefined, // Will be undefined if category is empty
+      deliveryCharges
     });
+
+    // Only update category if it was provided
+    if (category) {
+      const productCategory = await Category.findById(category);
+      if (!productCategory) {
+        return res.status(404).json({ error: "Category not found" });
+      }
+
+      productCategory.products.push(product._id);
+      await productCategory.save();
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "Product created successfully",
+      product
+    });
+  } finally {
+    if (filePaths) {
+      filePaths.forEach((filePath) => {
+        try {
+          fs.unlinkSync(filePath);
+        } catch (err) {
+          console.warn("Error deleting temp file:", err.message);
+        }
+      });
+    }
   }
-}
 });
 
 // Controller Function - Get All Products

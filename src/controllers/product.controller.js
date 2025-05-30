@@ -8,34 +8,30 @@ import mongoose from "mongoose";
 //createproduct
 export const createProduct = asyncHandler(async (req, res) => {
   const { name, description, price, features, originalPrice, category, inStock, deliveryCharges } = req.body;
-
+  
   if (!name || !description || !price || !features) {
-    return res
-      .status(400)
-      .json({ error: "Please fill all the required fields" });
+    return res.status(400).json({ error: "Please fill all the required fields" });
   }
-
+  
   if (!req.files || req.files.length === 0) {
     return res.status(400).json({ error: "Please upload at least one image" });
   }
-
-  // Only validate category if it's provided and not empty
+  
   if (category && !mongoose.Types.ObjectId.isValid(category)) {
-    return res
-      .status(400)
-      .json({ error: "Invalid category. Please select a valid one or leave it empty." });
+    return res.status(400).json({ error: "Invalid category. Please select a valid one or leave it empty." });
   }
-
-  let filePaths;
+  
+  const filePaths = req.files.map((file) => file.path);
+  let uploadResults;
+  
   try {
-    filePaths = req.files.map((file) => file.path);
-    const uploadResults = await uploadMultipleImages(filePaths, "uploads");
-
+    uploadResults = await uploadMultipleImages(filePaths, "uploads");
+    
     const images = uploadResults.map((result) => ({
       publicId: result.public_id,
       url: result.secure_url
     }));
-
+    
     const product = await Product.create({
       name,
       description,
@@ -44,39 +40,62 @@ export const createProduct = asyncHandler(async (req, res) => {
       images,
       inStock,
       originalPrice,
-      category: category || undefined, // Will be undefined if category is empty
+      category: category || undefined,
       deliveryCharges
     });
-
-    // Only update category if it was provided
+    
     if (category) {
       const productCategory = await Category.findById(category);
       if (!productCategory) {
         return res.status(404).json({ error: "Category not found" });
       }
-
       productCategory.products.push(product._id);
       await productCategory.save();
     }
-
+    
     res.status(201).json({
       success: true,
       message: "Product created successfully",
       product
     });
-  } finally {
-    if (filePaths) {
-      filePaths.forEach((filePath) => {
-        try {
-          fs.unlinkSync(filePath);
-        } catch (err) {
-          console.warn("Error deleting temp file:", err.message);
-        }
-      });
+  } catch (error) {
+    // Clean up any uploaded images if product creation fails
+    if (uploadResults) {
+      // Implement a function to delete uploaded images from cloud storage
+      await deleteUploadedImages(uploadResults.map(r => r.public_id));
     }
+    throw error; // Let asyncHandler handle it
+  } finally {
+    // Clean up temp files regardless of success/failure
+    await cleanupTempFiles(filePaths);
   }
 });
 
+async function cleanupTempFiles(filePaths) {
+  if (!filePaths) return;
+  
+  const deletionPromises = filePaths.map(filePath => {
+    return new Promise((resolve) => {
+      fs.access(filePath, fs.constants.F_OK, (err) => {
+        if (err) {
+          console.log(`File ${filePath} doesn't exist, skipping deletion`);
+          return resolve();
+        }
+        
+        fs.unlink(filePath, (unlinkErr) => {
+          if (unlinkErr) {
+            console.warn(`Error deleting temp file ${filePath}:`, unlinkErr.message);
+          } else {
+            console.log(`Successfully deleted temp file: ${filePath}`);
+          }
+          resolve();
+        });
+      });
+    });
+  });
+  
+  await Promise.all(deletionPromises);
+}
 // Controller Function - Get All Products
 export const getAllProducts = asyncHandler(async (req, res) => {
   try {

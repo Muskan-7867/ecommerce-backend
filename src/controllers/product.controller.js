@@ -62,7 +62,7 @@ export const createProduct = asyncHandler(async (req, res) => {
     // Clean up any uploaded images if product creation fails
     if (uploadResults) {
       // Implement a function to delete uploaded images from cloud storage
-      await deleteUploadedImages(uploadResults.map(r => r.public_id));
+      await deleteMultipleImages(uploadResults.map(r => r.public_id));
     }
     throw error; // Let asyncHandler handle it
   } finally {

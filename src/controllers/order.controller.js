@@ -72,7 +72,7 @@ const createRazorPayOrder = asyncHandler(async (req, res) => {
   const receipt_id = generateReceiptId();
 
   const options = {
-    amount: totalPrice * 100, // Razorpay expects paise
+    amount: totalPrice * 100,
     currency: "INR",
     receipt: receipt_id
   };
@@ -202,7 +202,12 @@ const createRazorPayOrderOfCart = asyncHandler(async (req, res) => {
       },
       status: "pending" // match enum
     });
-
+   const user = await User.findById(userId);
+    if (user) {
+      user.order = user.order || []; 
+      user.order.push(newOrder._id); 
+      await user.save();
+    }
     return res.status(200).json({
       success: true,
       order: newOrder,
@@ -312,18 +317,7 @@ const newOrder = asyncHandler(async (req, res) => {
     deliveryCharges,
     paymentMethod
   } = req.body;
-  console.log(
-    client,
-    quantity,
-    address,
-    totalPrice,
-    totalQuantity,
-    orderItems,
-    payment,
-    status,
-    isPaid,
-    paymentMethod
-  );
+
 
   const order = await Order.create({
     client: req.user._id,
@@ -338,6 +332,14 @@ const newOrder = asyncHandler(async (req, res) => {
     deliveryCharges,
     paymentMethod
   });
+  console.log("from order controller", order)
+    const user = await User.findById(req.user._id);
+    if (user) {
+    
+      user.order.push(order._id); 
+      await user.save();
+    }
+
   res.status(201).json({
     success: true,
     message: "Order created successfully",
@@ -427,5 +429,5 @@ export {
   newOrder,
   paymentVerify,
   getClientByOrderId,
-  createRazorPayOrderOfCart
+  createRazorPayOrderOfCart,
 };

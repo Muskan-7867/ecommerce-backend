@@ -102,7 +102,7 @@ const getUser = asyncHandler(async (req, res) => {
     .select("-password")
     .populate("address")
     .populate("order");
-
+  console.log("from get user", user.order);
   res.status(200).json({
     user: user,
     message: "User fetched successfully"

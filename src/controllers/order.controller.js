@@ -243,6 +243,8 @@ const paymentVerify = asyncHandler(async (req, res) => {
     const hmac = crypto.createHmac("sha256", secret);
     hmac.update(razorpay_order_id + "|" + razorpay_payment_id);
     const generatedSignature = hmac.digest("hex");
+     console.log("from paymentverify", generatedSignature);
+     console.log("from paymentverify", razorpay_signature);
 
     if (generatedSignature !== razorpay_signature) {
       return res.status(400).json({

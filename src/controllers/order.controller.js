@@ -247,7 +247,8 @@ const paymentVerify = asyncHandler(async (req, res) => {
 
     const secret = process.env.RAZORPAY_KEY_SECRET;
     const hmac = crypto.createHmac("sha256", secret);
-    hmac.update(razorpay_order_id + "|" + razorpay_payment_id);
+    const data = `${razorpay_order_id}|${razorpay_payment_id}`;
+    hmac.update(data);
     const generatedSignature = hmac.digest("hex");
      console.log("from paymentverify--> generated signature", generatedSignature);
      console.log("from paymentverify --> razorpay signature", razorpay_signature);

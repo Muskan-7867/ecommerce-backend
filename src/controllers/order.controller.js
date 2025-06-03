@@ -417,7 +417,7 @@ const paymentVerify = asyncHandler(async (req, res) => {
 
     // Update order status
     const updatedOrder = await Order.findByIdAndUpdate(
-      order._id,
+      {razorpay_order_id : razorpay_order_id},
       {
         $set: {
           "payment.razorpay_payment_id": razorpay_payment_id,
@@ -451,7 +451,7 @@ const paymentVerify = asyncHandler(async (req, res) => {
     });
   }
 });
-  
+
 
 const newOrder = asyncHandler(async (req, res) => {
   const {

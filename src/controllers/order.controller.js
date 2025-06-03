@@ -226,6 +226,8 @@ const paymentVerify = asyncHandler(async (req, res) => {
       paymentMethod
     } = req.body;
 
+    console.log("from payment verify" , razorpay_order_id, razorpay_payment_id, razorpay_signature);
+
     if (
       !razorpay_order_id ||
       !razorpay_payment_id ||
@@ -235,7 +237,8 @@ const paymentVerify = asyncHandler(async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message: "Please provide all the required fields"
+        message: "Please provide all the required fields",
+        error
       });
     }
 

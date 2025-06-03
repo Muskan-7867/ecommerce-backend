@@ -4,6 +4,7 @@ import {
   deleteProduct,
   getAllProducts,
   getFilteredProducts,
+  getFilteredProductsQuery,
   getProductsById,
   updateProduct
 } from "../controllers/product.controller.js";
@@ -34,6 +35,7 @@ productRouter.get("/categories", getAllCategories);
 productRouter.get("/category/:categoryId", getCategory);
 productRouter.get("/admincategories", getAllCategoriesForAdmin);
 productRouter.get("/category/name/:name", getProductByCategoryName);
+productRouter.get("/get", getFilteredProductsQuery);
 
 
 

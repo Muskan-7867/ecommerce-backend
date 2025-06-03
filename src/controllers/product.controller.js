@@ -2,36 +2,54 @@ import { Category } from "../models/category.model.js";
 import { Product } from "../models/product.model.js";
 import { asyncHandler } from "../utills/asyncHandler.js";
 import fs from "fs";
-import { deleteMultipleImages, uploadMultipleImages } from "../utills/cloudinary.js";
+import {
+  deleteMultipleImages,
+  uploadMultipleImages
+} from "../utills/cloudinary.js";
 import mongoose from "mongoose";
 
 //createproduct
 export const createProduct = asyncHandler(async (req, res) => {
-  const { name, description, price, features, originalPrice, category, inStock, deliveryCharges } = req.body;
-  
+  const {
+    name,
+    description,
+    price,
+    features,
+    originalPrice,
+    category,
+    inStock,
+    deliveryCharges
+  } = req.body;
+
   if (!name || !description || !price || !features) {
-    return res.status(400).json({ error: "Please fill all the required fields" });
+    return res
+      .status(400)
+      .json({ error: "Please fill all the required fields" });
   }
-  
+
   if (!req.files || req.files.length === 0) {
     return res.status(400).json({ error: "Please upload at least one image" });
   }
-  
+
   if (category && !mongoose.Types.ObjectId.isValid(category)) {
-    return res.status(400).json({ error: "Invalid category. Please select a valid one or leave it empty." });
+    return res
+      .status(400)
+      .json({
+        error: "Invalid category. Please select a valid one or leave it empty."
+      });
   }
-  
+
   const filePaths = req.files.map((file) => file.path);
   let uploadResults;
-  
+
   try {
     uploadResults = await uploadMultipleImages(filePaths, "uploads");
-    
+
     const images = uploadResults.map((result) => ({
       publicId: result.public_id,
       url: result.secure_url
     }));
-    
+
     const product = await Product.create({
       name,
       description,
@@ -43,7 +61,7 @@ export const createProduct = asyncHandler(async (req, res) => {
       category: category || undefined,
       deliveryCharges
     });
-    
+
     if (category) {
       const productCategory = await Category.findById(category);
       if (!productCategory) {
@@ -52,7 +70,7 @@ export const createProduct = asyncHandler(async (req, res) => {
       productCategory.products.push(product._id);
       await productCategory.save();
     }
-    
+
     res.status(201).json({
       success: true,
       message: "Product created successfully",
@@ -62,7 +80,7 @@ export const createProduct = asyncHandler(async (req, res) => {
     // Clean up any uploaded images if product creation fails
     if (uploadResults) {
       // Implement a function to delete uploaded images from cloud storage
-      await deleteMultipleImages(uploadResults.map(r => r.public_id));
+      await deleteMultipleImages(uploadResults.map((r) => r.public_id));
     }
     throw error; // Let asyncHandler handle it
   } finally {
@@ -73,18 +91,21 @@ export const createProduct = asyncHandler(async (req, res) => {
 
 async function cleanupTempFiles(filePaths) {
   if (!filePaths) return;
-  
-  const deletionPromises = filePaths.map(filePath => {
+
+  const deletionPromises = filePaths.map((filePath) => {
     return new Promise((resolve) => {
       fs.access(filePath, fs.constants.F_OK, (err) => {
         if (err) {
           console.log(`File ${filePath} doesn't exist, skipping deletion`);
           return resolve();
         }
-        
+
         fs.unlink(filePath, (unlinkErr) => {
           if (unlinkErr) {
-            console.warn(`Error deleting temp file ${filePath}:`, unlinkErr.message);
+            console.warn(
+              `Error deleting temp file ${filePath}:`,
+              unlinkErr.message
+            );
           } else {
             console.log(`Successfully deleted temp file: ${filePath}`);
           }
@@ -93,27 +114,26 @@ async function cleanupTempFiles(filePaths) {
       });
     });
   });
-  
+
   await Promise.all(deletionPromises);
 }
 // Controller Function - Get All Products
 export const getAllProducts = asyncHandler(async (req, res) => {
   try {
-    const products = await Product.find().populate("category", "name"); 
+    const products = await Product.find().populate("category", "name");
     res.status(200).json({
       success: true,
       count: products.length,
-      products,
+      products
     });
   } catch (error) {
     console.error("Error fetching products:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to fetch products",
+      message: "Failed to fetch products"
     });
   }
 });
-
 
 export const getFilteredProducts = asyncHandler(async (req, res) => {
   const maxPrice = Number(req.params.maxPrice) || 100000000;
@@ -142,12 +162,14 @@ export const getFilteredProducts = asyncHandler(async (req, res) => {
 
   return res.status(200).json({
     success: true,
-    message: products.length > 0 ? "Products fetched successfully" : "No products matched the filters.",
+    message:
+      products.length > 0
+        ? "Products fetched successfully"
+        : "No products matched the filters.",
     totalProduct,
     products
   });
 });
-
 
 //get product by single id
 export const getProductsById = asyncHandler(async (req, res) => {
@@ -194,10 +216,26 @@ export const deleteProduct = asyncHandler(async (req, res) => {
 //updateProduct
 export const updateProduct = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { name, description, price, features, inStock, category , deliveryCharges} =
-    req.body;
+  const {
+    name,
+    description,
+    price,
+    features,
+    inStock,
+    category,
+    deliveryCharges
+  } = req.body;
 
-  console.log("from bakcend" , name, description, price, features, inStock, category, deliveryCharges)
+  console.log(
+    "from bakcend",
+    name,
+    description,
+    price,
+    features,
+    inStock,
+    category,
+    deliveryCharges
+  );
 
   const product = await Product.findById(id);
   if (!product) {
@@ -213,10 +251,52 @@ export const updateProduct = asyncHandler(async (req, res) => {
     (product.inStock = inStock || product.inStock),
     (product.category = category || product.category),
     (product.deliveryCharges = deliveryCharges || product.deliveryCharges);
-    await product.save();
+  await product.save();
   res.status(200).json({
     success: true,
     message: "Product updated successfully",
     product
+  });
+});
+
+export const getFilteredProductsQuery = asyncHandler(async (req, res) => {
+  // Read from query parameters
+  const maxPrice = Number(req.query.maxPrice) || 1000000000000;
+  const minPrice = Number(req.query.minPrice) || 0;
+  const limit = Number(req.query.limit) || 9;
+  const page = Number(req.query.page) || 1;
+  const categoryId = req.query.category || null;
+  const search = req.query.search || "";
+
+  // Build the filter
+  const filter = {
+    price: { $gte: minPrice, $lte: maxPrice }
+  };
+
+  if (categoryId && categoryId !== "all") {
+    filter.category = categoryId;
+  }
+
+  if (search && !search.startsWith("-")) {
+    filter.name = { $regex: search, $options: "i" };
+  }
+
+  console.log("Final filter object:", filter);
+
+  const products = await Product.find(filter)
+    .populate("category", "name")
+    .skip((page - 1) * limit)
+    .limit(limit);
+
+  const totalProduct = await Product.countDocuments(filter);
+
+  return res.status(200).json({
+    success: true,
+    message:
+      products.length > 0
+        ? "Products fetched successfully"
+        : "No products matched the filters.",
+    totalProduct,
+    products
   });
 });

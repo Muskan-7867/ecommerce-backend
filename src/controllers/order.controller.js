@@ -80,9 +80,12 @@ const createRazorPayOrder = asyncHandler(async (req, res) => {
   try {
     const razorpayInstance = CreateRazorPayInstance();
 
-    razorpayInstance.orders.create(options, (err, razorpayorder) => {
-      if (err) return reject(err);
-      resolve(razorpayorder);
+    // Wrap the Razorpay order creation in a Promise
+    const razorpayorder = await new Promise((resolve, reject) => {
+      razorpayInstance.orders.create(options, (err, order) => {
+        if (err) reject(err);
+        else resolve(order);
+      });
     });
 
     const newOrder = await Order.create({
@@ -117,7 +120,7 @@ const createRazorPayOrder = asyncHandler(async (req, res) => {
     return res.status(201).json({
       success: true,
       message: "Razorpay order created successfully",
-      razorpayOrder,
+      razorpayOrder: razorpayorder,
       orderId: newOrder._id
     });
   } catch (error) {

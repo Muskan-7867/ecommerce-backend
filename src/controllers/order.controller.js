@@ -80,58 +80,61 @@ const createRazorPayOrder = asyncHandler(async (req, res) => {
   try {
     const razorpayInstance = CreateRazorPayInstance();
 
-    // Wrap the Razorpay order creation in a Promise
-    const razorpayorder = await new Promise((resolve, reject) => {
-      razorpayInstance.orders.create(options, (err, order) => {
-        if (err) reject(err);
-        else resolve(order);
-      });
-    });
-
-    const newOrder = await Order.create({
-      client: userId,
-      address,
-      quantity,
-      totalPrice,
-      totalQuantity: quantity,
-      deliveryCharges: product.deliveryCharges,
-      orderItems: [
-        {
-          product: product._id,
+    // Create the Razorpay order
+    razorpayInstance.orders.create(options, async (error, razorpayOrder) => {
+      if (error) {
+        return res.status(500).json({
+          success: false,
+          message: "Something went wrong while creating the Razorpay order",
+          error,
+        });
+      } else {
+        const newOrder = await Order.create({
+          client: userId,
+          address,
           quantity,
-          price: product.price
+          totalPrice,
+          totalQuantity: quantity,
+          deliveryCharges: product.deliveryCharges,
+          orderItems: [
+            {
+              product: product._id,
+              quantity,
+              price: product.price
+            }
+          ],
+          payment: {
+            razorpay_order_id: razorpayOrder.id, // Fixed variable name (was razorpayorder)
+            status: "Pending",
+            paymentMethod
+          }
+        });
+
+        const user = await User.findById(userId);
+        if (user) {
+          user.order = user.order || []; // Keep existing orders
+          user.order.push(newOrder._id); // Add new one
+          await user.save();
         }
-      ],
-      payment: {
-        razorpay_order_id: razorpayorder.id,
-        status: "Pending",
-        paymentMethod
+
+        console.log("from backend", newOrder);
+        return res.status(201).json({
+          success: true,
+          message: "Razorpay order created successfully",
+          razorpayOrder: razorpayOrder, // Fixed variable name (was razorpayorder)
+          orderId: newOrder._id
+        });
       }
     });
-
-    const user = await User.findById(userId);
-    if (user) {
-      user.order = user.order || []; // Keep existing orders
-      user.order.push(newOrder._id); // Add new one
-      await user.save();
-    }
-
-    console.log("from backend", newOrder);
-    return res.status(201).json({
-      success: true,
-      message: "Razorpay order created successfully",
-      razorpayOrder: razorpayorder,
-      orderId: newOrder._id
-    });
-  } catch (error) {
+  } catch (error) { // Moved the catch block outside the callback
+    console.log("from backend", error);
     return res.status(500).json({
       success: false,
-      message: "Failed to create Razorpay order",
-      error: error.message || error
+      message: "Something went wrong while creating the Razorpay order",
+      error
     });
   }
-});
-
+  });
 const createRazorPayOrderOfCart = asyncHandler(async (req, res) => {
   const { cartProductIds, address, quantities, paymentMethod } = req.body;
   const userId = req.user?._id;

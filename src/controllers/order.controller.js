@@ -134,8 +134,8 @@ const createRazorPayOrder = asyncHandler(async (req, res) => {
       error
     });
   }
-  });
-  
+});
+
 const createRazorPayOrderOfCart = asyncHandler(async (req, res) => {
   const { cartProductIds, address, quantities, paymentMethod } = req.body;
   const userId = req.user?._id;
@@ -421,6 +421,79 @@ const deleteOrderById = asyncHandler(async (req, res) => {
   });
 });
 
+const updateOrderStatus = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { status } = req.body;
+    
+    const validStatuses = ['pending', 'processing', 'delivered', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ message: 'Invalid status' });
+    }
+    
+    const order = await Order.findByIdAndUpdate(
+      orderId,
+      { status },
+      { new: true }
+    );
+    
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+    
+    res.json(order);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
+};
+
+ const updatePaymentStatus = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { paymentStatus } = req.body;
+    
+    const validStatuses = ['success', 'pending', 'failed'];
+    if (!validStatuses.includes(paymentStatus)) {
+      return res.status(400).json({ message: 'Invalid payment status' });
+    }
+    
+    const order = await Order.findByIdAndUpdate(
+      orderId,
+      { 'payment.paymentStatus': paymentStatus },
+      { new: true }
+    );
+    
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+    
+    res.json(order);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
+};
+
+const updatePaymentPaidStatus = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { isPaid } = req.body;
+    
+    const order = await Order.findByIdAndUpdate(
+      orderId,
+      { isPaid },
+      { new: true }
+    );
+    
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+    
+    res.json(order);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
+};
+
 export {
   getOrderProducts,
   deleteOrderById,
@@ -428,5 +501,9 @@ export {
   newOrder,
   paymentVerify,
   getClientByOrderId,
-  createRazorPayOrderOfCart
+  createRazorPayOrderOfCart,
+  updateOrderStatus,
+  updatePaymentStatus,
+  updatePaymentPaidStatus,
+
 };

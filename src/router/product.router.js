@@ -10,7 +10,7 @@ import {
 } from "../controllers/product.controller.js";
 import upload from "../middleware/multer.js";
 import { getCartProducts } from "../controllers/cart.controller.js";
-import {AddCategory,getAllCategories,
+import {AddCategory,deleteCategory,getAllCategories,
  getAllCategoriesForAdmin,
 getAllCategoriesForUser,
  getCategory,
@@ -36,6 +36,7 @@ productRouter.get("/category/:categoryId", getCategory);
 productRouter.get("/admincategories", getAllCategoriesForAdmin);
 productRouter.get("/category/name/:name", getProductByCategoryName);
 productRouter.get("/getquery", getFilteredProductsQuery);
+productRouter.delete("/category/delete/:id", deleteCategory);
 
 
 

@@ -12,7 +12,7 @@ orderRouter.post("/paymentverify", authenticator, paymentVerify);
 orderRouter.post("/create", authenticator,  newOrder);
 orderRouter.post("/cartrazorpayorder", authenticator,  createRazorPayOrderOfCart);
 orderRouter.get("/client/:orderId",  getClientByOrderId);
-orderRouter.patch('/:orderId/status', authenticator, roleAuthenticator('admin'), updateOrderStatus);
-orderRouter.patch('/:orderId/payment-status', authenticator, roleAuthenticator('admin'), updatePaymentStatus);
-orderRouter.patch('/:orderId/payment-paid', authenticator, roleAuthenticator('admin'), updatePaymentPaidStatus);
+orderRouter.patch('/:orderId/status', updateOrderStatus);
+orderRouter.patch('/:orderId/payment-status',  updatePaymentStatus);
+orderRouter.patch('/:orderId/payment-paid',  updatePaymentPaidStatus);
 

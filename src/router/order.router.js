@@ -7,7 +7,7 @@ export const orderRouter = Router()
 
 orderRouter.post("/razorpayorder", authenticator, createRazorPayOrder);
 orderRouter.delete("/delete/:orderid", deleteOrderById);
-orderRouter.get("/products", authenticator , getOrderProducts);
+orderRouter.get("/products", getOrderProducts);
 orderRouter.post("/paymentverify", authenticator, paymentVerify);
 orderRouter.post("/create", authenticator,  newOrder);
 orderRouter.post("/cartrazorpayorder", authenticator,  createRazorPayOrderOfCart);

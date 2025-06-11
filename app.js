@@ -12,9 +12,8 @@ app.use(express.json());
 const port = 3000;
 
 connectDB();
-// ["https://omeg-bazaar-client.vercel.app", "http://localhost:5173"]
 const corsOptions = {
-  origin: '*' ,
+  origin: ["https://omeg-bazaar-client.vercel.app", "http://localhost:5173"],
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   credentials: true,
   optionSuccessStatus: 200,

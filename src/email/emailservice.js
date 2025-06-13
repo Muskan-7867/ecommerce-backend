@@ -36,7 +36,7 @@ import transporter from "./transporter.js";
 
  const sendWelcomeEmail = async (userData) => {
   const html = `
-    <h2>Welcome to Our Platform, ${userData.username}!</h2>
+    <h2>Welcome to Omeg-Bazaar, ${userData.username}!</h2>
     <p>Thank you for registering with us. Your account has been successfully created.</p>
     <p>Here are your account details:</p>
     <ul>

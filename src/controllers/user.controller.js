@@ -111,7 +111,8 @@ const getUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user.id)
     .select("-password")
     .populate("address")
-    .populate("order");
+    .populate("order")
+    .populate("order.orderItems")
   console.log("from get user", user.order);
   res.status(200).json({
     user: user,

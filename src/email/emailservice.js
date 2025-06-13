@@ -53,4 +53,90 @@ import transporter from "./transporter.js";
   });
 }
 
-export { sendContactEmail, sendWelcomeEmail, sendGenericEmail }
+const sendOrderConfirmationEmail = async (data) => {
+  const { order, user, address } = data;
+  
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #4CAF50; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+        .content { padding: 20px; background-color: #f9f9f9; border-radius: 0 0 5px 5px; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .total-row { font-weight: bold; background-color: #f2f2f2; }
+        .footer { margin-top: 20px; font-size: 0.9em; color: #777; text-align: center; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h2>Order Confirmation</h2>
+        <p>Thank you for your order, ${user.name}!</p>
+      </div>
+      
+      <div class="content">
+        <p>Your order <strong>#${order._id}</strong> was placed on ${order.date} and is currently <strong>${order.status}</strong>.</p>
+        
+        <h3>Order Summary</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Quantity</th>
+             
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${order.items.map(item => `
+              <tr>
+                <td>${item.name}</td>
+                <td>${item.quantity}</td>
+               
+                <td>Rs.${item.total} /-</td>
+              </tr>
+            `).join('')}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3">Subtotal:</td>
+              <td>Rs.${order.subtotal} /-</td>
+            </tr>
+            <tr>
+              <td colspan="3">Delivery:</td>
+              <td>Rs. ${order.delivery} /-</td>
+            </tr>
+            <tr class="total-row">
+              <td colspan="3">Total:</td>
+              <td>Rs. ${order.grandTotal}/-</td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <h3>Payment Information</h3>
+        <p><strong>Method:</strong> ${order.paymentMethod.replace(/_/g, ' ').toUpperCase()}</p>
+        
+        <h3>Shipping Information</h3>
+        <p>${address}</p>
+
+        <p>We'll notify you when your order has shipped. If you have any questions, please contact our support team.</p>
+        
+        <div class="footer">
+          <p>Thank you for shopping with us!</p>
+          <p>© ${new Date().getFullYear()} Your Company Name. All rights reserved.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return sendGenericEmail({
+    to: user.email,
+    subject: `Order Confirmation #${order._id}`,
+    html
+  });
+};
+
+export { sendContactEmail, sendWelcomeEmail, sendGenericEmail , sendOrderConfirmationEmail}

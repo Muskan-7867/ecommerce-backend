@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { User } from "../models/user.model.js";
 import { asyncHandler } from "../utills/asyncHandler.js";
 import { Address } from "../models/address.model.js";
+import { sendWelcomeEmail } from "../email/emailservice.js";
 
 // Register controller
 const userRegister = asyncHandler(async (req, res) => {
@@ -51,9 +52,18 @@ const userRegister = asyncHandler(async (req, res) => {
     expiresIn: "1d"
   });
 
+  // Send welcome email (don't wait for it to complete)
+  sendWelcomeEmail({
+    username: user.username,
+    email: user.email
+  }).catch(error => {
+    console.error("Failed to send welcome email:", error);
+    // Don't fail the registration if email fails
+  });
+
   // Respond with token and user info
   res.status(201).json({
-    message: "User registered successfully!",
+    message: "User registered successfully! and Email send Successfully!!!",
     token,
     user: {
       id: user._id,

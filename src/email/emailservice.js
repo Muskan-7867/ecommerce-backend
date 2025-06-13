@@ -1,6 +1,6 @@
 import transporter from "./transporter.js";
 
-export const sendGenericEmail = async ({ to, subject, html }) => {
+ const sendGenericEmail = async ({ to, subject, html }) => {
   try {
     const mailOptions = {
       from: process.env.EMAIL_USER,
@@ -18,7 +18,7 @@ export const sendGenericEmail = async ({ to, subject, html }) => {
 };
 
 // Example usage for contact form
-export const sendContactEmail = async (data) => {
+ const sendContactEmail = async (data) => {
   const html = `
     <h3>New Contact Form Submission</h3>
     <p><strong>Name:</strong> ${data.name}</p>
@@ -32,3 +32,25 @@ export const sendContactEmail = async (data) => {
     html
   });
 };
+
+
+ const sendWelcomeEmail = async (userData) => {
+  const html = `
+    <h2>Welcome to Our Platform, ${userData.username}!</h2>
+    <p>Thank you for registering with us. Your account has been successfully created.</p>
+    <p>Here are your account details:</p>
+    <ul>
+      <li><strong>Username:</strong> ${userData.username}</li>
+      <li><strong>Email:</strong> ${userData.email}</li>
+    </ul>
+    <p>If you have any questions, feel free to contact our support team.</p>
+    <p>Best regards,<br/>The Team</p>
+  `;
+   return sendGenericEmail({
+    to: userData.email,
+    subject: 'Welcome to Our Platform!',
+    html
+  });
+}
+
+export { sendContactEmail, sendWelcomeEmail, sendGenericEmail }

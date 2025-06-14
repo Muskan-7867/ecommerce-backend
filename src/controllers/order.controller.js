@@ -211,6 +211,98 @@ const createRazorPayOrder = asyncHandler(async (req, res) => {
   }
 });
 
+// const createRazorPayOrderOfCart = asyncHandler(async (req, res) => {
+//   const { cartProductIds, address, quantities, paymentMethod } = req.body;
+//   const userId = req.user?._id;
+
+//   if (!cartProductIds || cartProductIds.length === 0) {
+//     return res.status(400).json({ success: false, message: "Cart is empty" });
+//   }
+
+//   // Fetch all products by IDs
+//   const products = await Product.find({ _id: { $in: cartProductIds } });
+
+//   if (!products || products.length === 0) {
+//     return res
+//       .status(404)
+//       .json({ success: false, message: "No valid products found in cart" });
+//   }
+
+//   // Build orderItems array
+//   const orderItems = products.map((product) => ({
+//     product: product._id,
+//     price: product.price,
+//     quantity: quantities[product._id] || 1,
+//     paymentMethod
+//   }));
+
+//   const totalQuantity = orderItems.reduce(
+//     (acc, item) => acc + item.quantity,
+//     0
+//   );
+//   const productTotal = orderItems.reduce(
+//     (acc, item) => acc + item.price * item.quantity,
+//     0
+//   );
+//   const deliveryCharges =
+//     products.length > 0
+//       ? products.reduce(
+//           (acc, product) => acc + (product.deliveryCharges || 0),
+//           0
+//         ) / products.length
+//       : 0;
+
+//   // Round to 2 decimal places if needed
+//   const roundedDeliveryCharges = Math.round(deliveryCharges * 100) / 100;
+//   const totalPrice = productTotal + roundedDeliveryCharges;
+
+//   const receipt_id = generateReceiptId();
+
+//   const options = {
+//     amount: totalPrice * 100, // in paise
+//     currency: "INR",
+//     receipt: receipt_id
+//   };
+
+//   const razorpayInstance = CreateRazorPayInstance();
+
+//   razorpayInstance.orders.create(options, async (error, razorpayOrder) => {
+//     if (error) {
+//       return res.status(500).json({
+//         success: false,
+//         message: "Error in creating Razorpay order",
+//         error
+//       });
+//     }
+
+//     const newOrder = await Order.create({
+//       client: userId,
+//       orderItems,
+//       address,
+//       totalQuantity,
+//       totalPrice,
+//       roundedDeliveryCharges,
+//       payment: {
+//         razorpay_order_id: razorpayOrder.id,
+//         status: "Pending",
+//         paymentMethod: paymentMethod
+//       },
+//       status: "pending"
+//     });
+
+//     const user = await User.findById(userId);
+//     if (user) {
+//       user.order = user.order || [];
+//       user.order.push(newOrder._id);
+//       await user.save();
+//     }
+//     return res.status(200).json({
+//       success: true,
+//       order: newOrder,
+//       razorpayOrder
+//     });
+//   });
+// });
 const createRazorPayOrderOfCart = asyncHandler(async (req, res) => {
   const { cartProductIds, address, quantities, paymentMethod } = req.body;
   const userId = req.user?._id;
@@ -221,6 +313,7 @@ const createRazorPayOrderOfCart = asyncHandler(async (req, res) => {
 
   // Fetch all products by IDs
   const products = await Product.find({ _id: { $in: cartProductIds } });
+  const user = await User.findById(userId);
 
   if (!products || products.length === 0) {
     return res
@@ -290,12 +383,43 @@ const createRazorPayOrderOfCart = asyncHandler(async (req, res) => {
       status: "pending"
     });
 
-    const user = await User.findById(userId);
     if (user) {
       user.order = user.order || [];
       user.order.push(newOrder._id);
       await user.save();
     }
+
+    // Prepare data for email confirmation
+    const emailData = {
+      order: {
+        _id: newOrder._id,
+        date: newOrder.createdAt.toLocaleDateString(),
+        status: "Pending",
+        items: products.map(product => ({
+          name: product.name,
+          quantity: quantities[product._id] || 1,
+          total: (product.price * (quantities[product._id] || 1)).toFixed(2)
+        })),
+        subtotal: productTotal.toFixed(2),
+        delivery: roundedDeliveryCharges.toFixed(2),
+        grandTotal: totalPrice.toFixed(2),
+        paymentMethod: paymentMethod
+      },
+      user: {
+        name: user.name,
+        email: user.email
+      },
+      address: address
+    };
+
+    try {
+      // Send confirmation email
+      await sendOrderConfirmationEmail(emailData);
+    } catch (emailError) {
+      console.error("Failed to send confirmation email:", emailError);
+      // Don't fail the order if email fails, just log it
+    }
+
     return res.status(200).json({
       success: true,
       order: newOrder,
@@ -303,7 +427,6 @@ const createRazorPayOrderOfCart = asyncHandler(async (req, res) => {
     });
   });
 });
-
 const paymentVerify = asyncHandler(async (req, res) => {
   try {
     const {

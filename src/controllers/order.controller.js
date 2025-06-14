@@ -9,45 +9,95 @@ import { sendOrderConfirmationEmail } from "../email/emailservice.js";
 
 const generateReceiptId = () => crypto.randomBytes(16).toString("hex");
 
-// const orderProduct = asyncHandler(async (req, res) => {
-//   const { quantity, orderItems, address, totalPrice, totalQuantity } = req.body;
-//   if (!quantity || !address || !totalPrice) {
+// const createRazorPayOrder = asyncHandler(async (req, res) => {
+//   const { productid, address, quantity, paymentMethod } = req.body;
+
+//   if (!productid || !address || !quantity) {
 //     return res.status(400).json({
 //       success: false,
 //       message: "Please fill all the fields"
 //     });
 //   }
 
-//   const payment = await Payemnt.create({
-//     amount: totalPrice,
-//     paymentMethod: "online_payment"
-//   });
+//   const userId = req.user?._id;
+//   const product = await Product.findById(productid);
 
-//   const order = await Order.create({
-//     address,
-//     quantity,
-//     totalPrice,
-//     totalQuantity,
-//     payment: payment._id,
-//     orderItems,
-//     client: req.user._id,
-//     isPaid: payment ? true : false
-//   });
-
-//   if (order) {
-//     const user = await User.findById(req.user._id);
-//     user.order.push(order._id);
-
-//     await user.save();
+//   if (!product) {
+//     return res.status(404).json({
+//       success: false,
+//       message: "Product not found"
+//     });
 //   }
 
-//   return res.status(200).json({
-//     success: true,
-//     message: "Order Placed Successfully",
-//     orderId: order._id
-//   });
-// });
+//   const productPrice = product.price * quantity;
+//   const totalPrice = productPrice + product.deliveryCharges;
+//   const receipt_id = generateReceiptId();
 
+//   const options = {
+//     amount: totalPrice * 100,
+//     currency: "INR",
+//     receipt: receipt_id
+//   };
+
+//   try {
+//     const razorpayInstance = CreateRazorPayInstance();
+
+//     // Create the Razorpay order
+//     razorpayInstance.orders.create(options, async (error, razorpayOrder) => {
+//       if (error) {
+//         return res.status(500).json({
+//           success: false,
+//           message: "Something went wrong while creating the Razorpay order",
+//           error
+//         });
+//       } else {
+//         const newOrder = await Order.create({
+//           client: userId,
+//           address,
+//           quantity,
+//           totalPrice,
+//           totalQuantity: quantity,
+//           deliveryCharges: product.deliveryCharges,
+//           orderItems: [
+//             {
+//               product: product._id,
+//               quantity,
+//               price: product.price
+//             }
+//           ],
+//           payment: {
+//             razorpay_order_id: razorpayOrder.id, // Fixed variable name (was razorpayorder)
+//             status: "Pending",
+//             paymentMethod
+//           }
+//         });
+
+//         const user = await User.findById(userId);
+//         if (user) {
+//           user.order = user.order || []; // Keep existing orders
+//           user.order.push(newOrder._id); // Add new one
+//           await user.save();
+//         }
+
+//         console.log("from backend", newOrder);
+//         return res.status(201).json({
+//           success: true,
+//           message: "Razorpay order created successfully",
+//           razorpayOrder: razorpayOrder, // Fixed variable name (was razorpayorder)
+//           orderId: newOrder._id
+//         });
+//       }
+//     });
+//   } catch (error) {
+//     // Moved the catch block outside the callback
+//     console.log("from backend", error);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Something went wrong while creating the Razorpay order",
+//       error
+//     });
+//   }
+// });
 const createRazorPayOrder = asyncHandler(async (req, res) => {
   const { productid, address, quantity, paymentMethod } = req.body;
 
@@ -60,6 +110,7 @@ const createRazorPayOrder = asyncHandler(async (req, res) => {
 
   const userId = req.user?._id;
   const product = await Product.findById(productid);
+  const user = await User.findById(userId);
 
   if (!product) {
     return res.status(404).json({
@@ -81,7 +132,6 @@ const createRazorPayOrder = asyncHandler(async (req, res) => {
   try {
     const razorpayInstance = CreateRazorPayInstance();
 
-    // Create the Razorpay order
     razorpayInstance.orders.create(options, async (error, razorpayOrder) => {
       if (error) {
         return res.status(500).json({
@@ -105,30 +155,53 @@ const createRazorPayOrder = asyncHandler(async (req, res) => {
             }
           ],
           payment: {
-            razorpay_order_id: razorpayOrder.id, // Fixed variable name (was razorpayorder)
+            razorpay_order_id: razorpayOrder.id,
             status: "Pending",
             paymentMethod
           }
         });
 
-        const user = await User.findById(userId);
         if (user) {
-          user.order = user.order || []; // Keep existing orders
-          user.order.push(newOrder._id); // Add new one
+          user.order = user.order || [];
+          user.order.push(newOrder._id);
           await user.save();
         }
 
-        console.log("from backend", newOrder);
+        // Prepare data for email
+        const emailData = {
+          order: {
+            _id: newOrder._id,
+            date: newOrder.createdAt.toLocaleDateString(),
+            status: "Pending",
+            items: [{
+              name: product.name,
+              quantity: quantity,
+              total: productPrice
+            }],
+            subtotal: productPrice,
+            delivery: product.deliveryCharges,
+            grandTotal: totalPrice,
+            paymentMethod: paymentMethod
+          },
+          user: {
+            name: user.name,
+            email: user.email
+          },
+          address: address
+        };
+
+        // Send confirmation email
+        await sendOrderConfirmationEmail(emailData);
+
         return res.status(201).json({
           success: true,
           message: "Razorpay order created successfully",
-          razorpayOrder: razorpayOrder, // Fixed variable name (was razorpayorder)
+          razorpayOrder: razorpayOrder,
           orderId: newOrder._id
         });
       }
     });
   } catch (error) {
-    // Moved the catch block outside the callback
     console.log("from backend", error);
     return res.status(500).json({
       success: false,

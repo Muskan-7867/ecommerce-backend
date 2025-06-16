@@ -139,4 +139,56 @@ const sendOrderConfirmationEmail = async (data) => {
   });
 };
 
-export { sendContactEmail, sendWelcomeEmail, sendGenericEmail , sendOrderConfirmationEmail}
+const sendOrderStatusUpdateEmail = async (data) => {
+  const { order, user, address, updateType, newStatus } = data;
+  
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #4CAF50; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+        .content { padding: 20px; background-color: #f9f9f9; border-radius: 0 0 5px 5px; }
+        .footer { margin-top: 20px; font-size: 0.9em; color: #777; text-align: center; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h2>Order Update Notification</h2>
+      </div>
+      
+      <div class="content">
+        <p>Hello ${user.name},</p>
+        <p>Your order <strong>#${order._id}</strong> has been updated:</p>
+        
+        <h3>Update Details</h3>
+        <p><strong>${updateType}:</strong> ${newStatus}</p>
+        <p><strong>Updated At:</strong> ${new Date().toLocaleString()}</p>
+        
+        <h3>Order Summary</h3>
+        <p><strong>Status:</strong> ${order.status}</p>
+        <p><strong>Payment Status:</strong> ${order.payment.paymentStatus}</p>
+        <p><strong>Total:</strong> Rs. ${order.totalPrice}/-</p>
+        
+        <h3>Shipping Information</h3>
+        <p>${address}</p>
+
+        <p>If you have any questions, contact our support team.</p>
+        
+        <div class="footer">
+          <p>© ${new Date().getFullYear()} Your Company Name. All rights reserved.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return sendGenericEmail({
+    to: user.email,
+    subject: `Order #${order._id} Status Update`,
+    html
+  });
+};
+
+export { sendContactEmail, sendWelcomeEmail, sendGenericEmail , sendOrderConfirmationEmail, sendOrderStatusUpdateEmail}

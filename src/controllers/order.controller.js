@@ -5,7 +5,7 @@ import { CreateRazorPayInstance } from "../config/razorpay.js";
 import crypto from "crypto";
 import { Payment } from "../models/payment.model.js";
 import { User } from "../models/user.model.js";
-import { sendOrderConfirmationEmail } from "../email/emailservice.js";
+import { sendOrderConfirmationEmail, sendOrderStatusUpdateEmail } from "../email/emailservice.js";
 
 const generateReceiptId = () => crypto.randomBytes(16).toString("hex");
 
@@ -703,6 +703,23 @@ const updateOrderStatus = async (req, res) => {
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }
+    const user = await User.findById(order.client);
+    if(!user){
+      return res.status(404).json({ message: "User not found" });
+    }
+
+     if (user) {
+      sendOrderStatusUpdateEmail({
+        order,
+        user: { 
+          name: user.username, 
+          email: user.email 
+        },
+        address: order.address,
+        updateType: "Order Status",
+        newStatus: status
+      }).catch(console.error);
+    }
 
     res.json(order);
   } catch (error) {
@@ -729,7 +746,19 @@ const updatePaymentStatus = async (req, res) => {
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }
-
+   const user = await User.findById(order.client);
+   if(user){
+     sendOrderStatusUpdateEmail({
+        order,
+        user: { 
+          name: user.username, 
+          email: user.email 
+        },
+        address: order.address,
+        updateType: "Payment Status",
+        newStatus: paymentStatus
+      }).catch(console.error);
+   }
     res.json(order);
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
@@ -749,6 +778,19 @@ const updatePaymentPaidStatus = async (req, res) => {
 
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
+    }
+    const user = await User.findById(order.client);
+    if (user) {
+      sendOrderStatusUpdateEmail({
+        order,
+        user: { 
+          name: user.username, 
+          email: user.email 
+        },
+        address: order.address,
+        updateType: "Payment Completion",
+        newStatus: isPaid ? "Completed" : "Pending"
+      }).catch(console.error);
     }
 
     res.json(order);

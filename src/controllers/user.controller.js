@@ -163,7 +163,8 @@ const forgotPassword = async (req, res) => {
         pass: process.env.EMAIL_PASSWORD
       }
     });
-    const baseUrl = process.env.VITE_BASE_URL;
+    const baseUrl = "https://omeg-bazaar-client.vercel.app";
+    console.log("base url", baseUrl);
     const resetUrl = `${baseUrl}/resetpassword/${token}`;
 
     await transporter.sendMail({

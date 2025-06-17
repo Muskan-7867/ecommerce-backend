@@ -4,6 +4,8 @@ import { User } from "../models/user.model.js";
 import { asyncHandler } from "../utills/asyncHandler.js";
 import { Address } from "../models/address.model.js";
 import { sendWelcomeEmail } from "../email/emailservice.js";
+import crypto from "crypto";
+import nodemailer from "nodemailer";
 
 // Register controller
 const userRegister = asyncHandler(async (req, res) => {
@@ -56,7 +58,7 @@ const userRegister = asyncHandler(async (req, res) => {
   sendWelcomeEmail({
     username: user.username,
     email: user.email
-  }).catch(error => {
+  }).catch((error) => {
     console.error("Failed to send welcome email:", error);
     // Don't fail the registration if email fails
   });
@@ -72,7 +74,6 @@ const userRegister = asyncHandler(async (req, res) => {
     }
   });
 });
-
 
 // Login controller
 const userLogin = asyncHandler(async (req, res) => {
@@ -112,7 +113,7 @@ const getUser = asyncHandler(async (req, res) => {
     .select("-password")
     .populate("address")
     .populate("order")
-    .populate("order.orderItems")
+    .populate("order.orderItems");
   console.log("from get user", user.order);
   res.status(200).json({
     user: user,
@@ -132,50 +133,106 @@ const updateUserProfile = asyncHandler(async (req, res) => {
   res.status(200).json({ user, message: "User updated successfully" });
 });
 
-//forgot password
-const forgotPassword = asyncHandler(async (req, res) => {
-  const { email } = req.body;
-  if (!email) {
-    return res.status(400).json({ message: "Please provide email" });
-  }
 
-  const user = await User.findOne({ email });
-  if (!user) {
-    return res.status(400).json({ message: "User Not Found" });
-  }
 
-  const resetToken = user.getResetPasswordToken;
-
-  await user.save({ validateBeforeSave: false });
-
-  const resetUrl = `${req.protocol}://${req.get(
-    "host"
-  )}/api/v1/user/resetpassword/${resetToken}`;
-
-  const message = `You are receiving this email because you (or someone else) has requested the reset of a password. Please click on the following link: ${resetUrl}`;
+const forgotPassword = async (req, res) => {
   try {
-    await sendEmail({
-      email: user.email,
-      subject: "Password reset request",
-      message
+    const { email } = req.body;
+    // 1. Check if user exists
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    console.log("from forgot", user);
+    // 2. Generate reset token
+    const token = crypto.randomBytes(20).toString("hex");
+    console.log("from forgot password", token);
+    user.resetPasswordToken = token;
+    user.resetPasswordExpire = Date.now() + 3600000;
+    console.log("Saving token to user:", token);
+    await user.save();
+    console.log("User after save:", user);
+    const updatedUser = await User.findOne({ email });
+    console.log("Saved token:", updatedUser.resetPasswordToken);
+
+    // 3. Send email with reset link
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD
+      }
     });
-    res
-      .status(200)
-      .json({
-        success: true,
-        message: "password is forget successfully and Email sent successfully"
-      });
+    const baseUrl = process.env.VITE_BASE_URL;
+    const resetUrl = `${baseUrl}/resetpassword/${token}`;
+
+    await transporter.sendMail({
+      to: user.email,
+      from: process.env.EMAIL_USER,
+      // from: "anil@omenterprisesgroup.in",
+      subject: "Password Reset Request",
+      html: `
+        <p>You requested a password reset</p>
+        <p >Click this <a href="${resetUrl}">link</a> to reset your password</p>
+        <p>This link will expire in 1 hour</p>
+      `
+    });
+
+    res.status(200).json({ message: "Password reset email sent" });
   } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Reset password
+const resetPassword = async (req, res) => {
+  try {
+    const { token } = req.params;
+    console.log("from backend resetpassword", token);
+    const { newPassword } = req.body;
+
+    // 1. Find user with valid token
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpire: { $gt: Date.now() }
+    });
+    console.log("from backend resetpassword", user);
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired token" });
+    }
+    // 2. Update password and clear token
+    // Hash the password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    user.password = hashedPassword;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
 
-    await user.save({ validateBeforeSave: false });
+    await user.save();
+    // 3. Send confirmation email
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD
+      }
+    });
 
-    return res
-      .status(500)
-      .json({ success: false, message: "Email could not be sent" });
+    await transporter.sendMail({
+      to: user.email,
+      from: process.env.EMAIL_USER,
+      subject: "Password Changed Successfully",
+      html: "<p>Your password has been successfully changed</p>"
+    });
+
+    res.status(200).json({ message: "Password updated successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
   }
-});
+};
 
 const fetchUserAddressFromId = asyncHandler(async (req, res) => {
   const { addressId } = req.params;
@@ -215,5 +272,6 @@ export {
   updateUserProfile,
   forgotPassword,
   fetchUserAddressFromId,
-  getAllUsers
+  getAllUsers,
+  resetPassword
 };

@@ -4,6 +4,7 @@ import {
   forgotPassword,
   getAllUsers,
   getUser,
+  resetPassword,
   updateUserProfile,
   userLogin,
   
@@ -19,5 +20,6 @@ UserRouter.post("/register", userRegister);
 UserRouter.get("/current", authenticator, getUser);
 UserRouter.put("/update", authenticator, updateUserProfile)
 UserRouter.post("/forgotpassword", forgotPassword);
+UserRouter.post("/resetpassword/:token", resetPassword);
 UserRouter.put("/address", authenticator, createAddress);
 UserRouter.get("/useraddress/:addressId", authenticator, fetchUserAddressFromId);

@@ -184,8 +184,8 @@ const createRazorPayOrder = asyncHandler(async (req, res) => {
             paymentMethod: paymentMethod
           },
           user: {
-            name: user.username,
-            email: user.email
+            name: user?.username,
+            email: user?.email
           },
           address: address
         };

@@ -5,7 +5,10 @@ import { CreateRazorPayInstance } from "../config/razorpay.js";
 import crypto from "crypto";
 import { Payment } from "../models/payment.model.js";
 import { User } from "../models/user.model.js";
-import { sendOrderConfirmationEmail, sendOrderStatusUpdateEmail } from "../email/emailservice.js";
+import {
+  sendOrderConfirmationEmail,
+  sendOrderStatusUpdateEmail
+} from "../email/emailservice.js";
 
 const generateReceiptId = () => crypto.randomBytes(16).toString("hex");
 
@@ -173,11 +176,13 @@ const createRazorPayOrder = asyncHandler(async (req, res) => {
             _id: newOrder._id,
             date: newOrder.createdAt.toLocaleDateString(),
             status: "Pending",
-            items: [{
-              name: product.name,
-              quantity: quantity,
-              total: productPrice
-            }],
+            items: [
+              {
+                name: product.name,
+                quantity: quantity,
+                total: productPrice
+              }
+            ],
             subtotal: productPrice,
             delivery: product.deliveryCharges,
             grandTotal: totalPrice,
@@ -395,7 +400,7 @@ const createRazorPayOrderOfCart = asyncHandler(async (req, res) => {
         _id: newOrder._id,
         date: newOrder.createdAt.toLocaleDateString(),
         status: "Pending",
-        items: products.map(product => ({
+        items: products.map((product) => ({
           name: product.name,
           quantity: quantities[product._id] || 1,
           total: (product.price * (quantities[product._id] || 1)).toFixed(2)
@@ -427,6 +432,7 @@ const createRazorPayOrderOfCart = asyncHandler(async (req, res) => {
     });
   });
 });
+
 const paymentVerify = asyncHandler(async (req, res) => {
   try {
     const {
@@ -704,16 +710,16 @@ const updateOrderStatus = async (req, res) => {
       return res.status(404).json({ message: "Order not found" });
     }
     const user = await User.findById(order.client);
-    if(!user){
+    if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-     if (user) {
+    if (user) {
       sendOrderStatusUpdateEmail({
         order,
-        user: { 
-          name: user.username, 
-          email: user.email 
+        user: {
+          name: user.username,
+          email: user.email
         },
         address: order.address,
         updateType: "Order Status",
@@ -746,19 +752,19 @@ const updatePaymentStatus = async (req, res) => {
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }
-   const user = await User.findById(order.client);
-   if(user){
-     sendOrderStatusUpdateEmail({
+    const user = await User.findById(order.client);
+    if (user) {
+      sendOrderStatusUpdateEmail({
         order,
-        user: { 
-          name: user.username, 
-          email: user.email 
+        user: {
+          name: user.username,
+          email: user.email
         },
         address: order.address,
         updateType: "Payment Status",
         newStatus: paymentStatus
       }).catch(console.error);
-   }
+    }
     res.json(order);
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
@@ -783,9 +789,9 @@ const updatePaymentPaidStatus = async (req, res) => {
     if (user) {
       sendOrderStatusUpdateEmail({
         order,
-        user: { 
-          name: user.username, 
-          email: user.email 
+        user: {
+          name: user.username,
+          email: user.email
         },
         address: order.address,
         updateType: "Payment Completion",
@@ -799,6 +805,34 @@ const updatePaymentPaidStatus = async (req, res) => {
   }
 };
 
+const getOrdersById = async (req, res) => {
+  const { orderId } = req.params;
+
+  try {
+    const order = await Order.findById(orderId)
+      .populate("client" )
+      .populate("orderItems.product");
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    // Format the response as needed
+    const response = {
+      id: order._id,
+      status: order.status,
+      totalPrice: order.totalPrice,
+      itemname: order.orderItems.map((item) => item.product.name),
+      quantity: order.orderItems.map((item) => item.quantity),
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error("Error fetching order:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 export {
   getOrderProducts,
   deleteOrderById,
@@ -809,5 +843,6 @@ export {
   createRazorPayOrderOfCart,
   updateOrderStatus,
   updatePaymentStatus,
-  updatePaymentPaidStatus
+  updatePaymentPaidStatus,
+  getOrdersById
 };

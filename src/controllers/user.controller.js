@@ -133,8 +133,6 @@ const updateUserProfile = asyncHandler(async (req, res) => {
   res.status(200).json({ user, message: "User updated successfully" });
 });
 
-
-
 const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;

@@ -1,6 +1,8 @@
-import express from "express";
-import { sendContactEmail } from "../email/emailservice.js"
+// import express from "express";
+// import { sendContactEmail } from "../email/emailservice.js"
 
+const express = require("express");
+const { sendContactEmail } = require("../email/emailservice.js")
 
 const emailRoutes = express.Router();
 
@@ -22,4 +24,4 @@ emailRoutes.post("/contact", async (req, res) => {
 
 
 
-export default emailRoutes;
+module.exports = emailRoutes;

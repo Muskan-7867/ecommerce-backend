@@ -1,6 +1,10 @@
-import { Admin } from "../models/admin.model.js";
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
+// import { Admin } from "../models/admin.model.js";
+// import bcrypt from "bcryptjs";
+// import jwt from "jsonwebtoken";
+
+const Admin = require("../models/adminmodel.js");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
 // Use the secret key from .env
 const secret_key = process.env.JWT_SECRET_KEY || "defaultSecretKey"; // fallback for dev
@@ -27,7 +31,7 @@ const createAdmin = async (req, res) => {
       name,
       email,
       password: hashedPassword,
-      role,
+      role
     });
 
     await newAdmin.save();
@@ -62,7 +66,7 @@ const adminLogin = async (req, res) => {
     // Create JWT token
     const token = jwt.sign(
       { _id: admin._id, email: admin.email },
-       process.env.JWT_SECRET_KEY,
+      process.env.JWT_SECRET_KEY,
       { expiresIn: "1h" }
     );
 
@@ -71,7 +75,7 @@ const adminLogin = async (req, res) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "Strict",
-      maxAge: 60 * 60 * 1000, 
+      maxAge: 60 * 60 * 1000
     });
 
     res
@@ -99,7 +103,7 @@ const getAdminInfo = async (req, res) => {
 
     res.status(200).json({
       admin,
-      message: "Admin found",
+      message: "Admin found"
     });
   } catch (error) {
     console.error("Get admin info error:", error);
@@ -107,4 +111,9 @@ const getAdminInfo = async (req, res) => {
   }
 };
 
-export { createAdmin, adminLogin, getAdminInfo };
+// export { createAdmin, adminLogin, getAdminInfo };
+module.exports = {
+  createAdmin,
+  adminLogin,
+  getAdminInfo
+};

@@ -1,11 +1,20 @@
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
-import { User } from "../models/user.model.js";
-import { asyncHandler } from "../utills/asyncHandler.js";
-import { Address } from "../models/address.model.js";
-import { sendWelcomeEmail } from "../email/emailservice.js";
-import crypto from "crypto";
-import nodemailer from "nodemailer";
+// import bcrypt from "bcrypt";
+// import jwt from "jsonwebtoken";
+// import { User } from "../models/user.model.js";
+// import { asyncHandler } from "../utills/asyncHandler.js";
+// import { Address } from "../models/address.model.js";
+// import { sendWelcomeEmail } from "../email/emailservice.js";
+// import crypto from "crypto";
+// import nodemailer from "nodemailer";
+
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const User = require("../models/usermodel.js");
+const asyncHandler = require("../utills/asyncHandler.js");
+const Address = require("../models/addressmodel.js");
+const sendWelcomeEmail = require("../email/emailservice.js");
+const crypto = require("crypto");
+const nodemailer = require("nodemailer");
 
 // Register controller
 const userRegister = asyncHandler(async (req, res) => {
@@ -264,7 +273,7 @@ const getAllUsers = asyncHandler(async (req, res) => {
   });
 });
 
-export {
+module.exports = {
   userRegister,
   userLogin,
   getUser,

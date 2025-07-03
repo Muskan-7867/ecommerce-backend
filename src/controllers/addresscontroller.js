@@ -1,6 +1,10 @@
-import { Address } from "../models/address.model.js";
-import { User } from "../models/user.model.js";
-import { asyncHandler } from "../utills/asyncHandler.js";
+// import { Address } from "../models/address.model.js";
+// import { User } from "../models/user.model.js";
+// import { asyncHandler } from "../utills/asyncHandler.js";
+
+const Address = require("../models/addressmodel.js");
+const User = require("../models/usermodel.js");
+const asyncHandler = require("../utills/asyncHandler.js");
 
 const createAddress = asyncHandler(async (req, res) => {
   const userId = req.userId;
@@ -9,8 +13,13 @@ const createAddress = asyncHandler(async (req, res) => {
     req.body;
 
   if (
-    !phone || !street || !city || !state ||
-    !pincode || !address  || !country
+    !phone ||
+    !street ||
+    !city ||
+    !state ||
+    !pincode ||
+    !address ||
+    !country
   ) {
     return res.status(400).json({
       success: false,
@@ -69,7 +78,6 @@ const createAddress = asyncHandler(async (req, res) => {
       message: "Address added successfully",
       data: newAddress
     });
-
   } catch (error) {
     console.error("Error creating/updating address:", error);
     return res.status(500).json({
@@ -80,5 +88,4 @@ const createAddress = asyncHandler(async (req, res) => {
   }
 });
 
-
-export { createAddress };
+module.exports = createAddress;

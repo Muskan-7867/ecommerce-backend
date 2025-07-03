@@ -1,7 +1,9 @@
-import { v2 as cloudinary } from "cloudinary";
-import dotenv from "dotenv";
-import  fs  from "fs"
-
+// import { v2 as cloudinary } from "cloudinary";
+// import dotenv from "dotenv";
+// import  fs  from "fs"
+ 
+const cloudinary = require("cloudinary").v2;
+const dotenv = require("dotenv");
 dotenv.config();
 
  cloudinary.config({
@@ -55,7 +57,7 @@ const deleteMultipleImages = async(data) => {
     throw error;
   }
 }
-export  {
+module.exports =  {
   uploadImage,
   uploadMultipleImages,
   deleteMultipleImages

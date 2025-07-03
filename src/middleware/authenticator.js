@@ -1,5 +1,7 @@
-import jwt from "jsonwebtoken";
-import { User } from "../models/user.model.js";
+// import jwt from "jsonwebtoken";
+// import { User } from "../models/user.model.js";
+const jwt = require("jsonwebtoken");
+const User = require("../models/usermodel.js");
 
 const authenticator = async (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -14,13 +16,12 @@ const authenticator = async (req, res, next) => {
     const user = await User.findById(decoded.id).select(
       "username email role _id contact address order"
     );
-    console.log("from auth", user)
+    console.log("from auth", user);
 
     if (!user) return res.status(401).json({ message: "User not found" });
 
     req.user = user;
-    req.userId = user._id,
-    req.id = decoded.id;
+    (req.userId = user._id), (req.id = decoded.id);
     next();
   } catch (err) {
     return res
@@ -39,4 +40,4 @@ const roleAuthenticator = (role) => {
   };
 };
 
-export { authenticator, roleAuthenticator };
+module.exports = { authenticator, roleAuthenticator };

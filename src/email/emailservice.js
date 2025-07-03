@@ -1,4 +1,6 @@
-import transporter from "./transporter.js";
+// import transporter from "./transporter.js";
+const transporter = require("./transporter.js");
+
 
  const sendGenericEmail = async ({ to, subject, html }) => {
   try {
@@ -191,4 +193,4 @@ const sendOrderStatusUpdateEmail = async (data) => {
   });
 };
 
-export { sendContactEmail, sendWelcomeEmail, sendGenericEmail , sendOrderConfirmationEmail, sendOrderStatusUpdateEmail}
+module.exports =  { sendContactEmail, sendWelcomeEmail, sendGenericEmail , sendOrderConfirmationEmail, sendOrderStatusUpdateEmail}

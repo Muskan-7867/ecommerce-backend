@@ -1,8 +1,14 @@
-import connectDB from "./src/config/db.js";
-import express from "express";
-import mainRouter from "./src/router/route.js";
-import dotenv from "dotenv";
-import cors from "cors";
+// import connectDB from "./src/config/db.js";
+// import express from "express";
+// import mainRouter from "./src/router/route.js";
+// import dotenv from "dotenv";
+// import cors from "cors";
+
+const connectDB = require("./src/config/db.js");
+const express = require("express");
+const dotenv = require("dotenv");
+const cors = require("cors");
+const mainRouter = require("./src/router/route.js");
 
 dotenv.config();
 

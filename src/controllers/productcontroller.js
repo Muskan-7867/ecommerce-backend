@@ -1,15 +1,25 @@
-import { Category } from "../models/category.model.js";
-import { Product } from "../models/product.model.js";
-import { asyncHandler } from "../utills/asyncHandler.js";
-import fs from "fs";
-import {
+// import { Category } from "../models/category.model.js";
+// import { Product } from "../models/product.model.js";
+// import { asyncHandler } from "../utills/asyncHandler.js";
+// import fs from "fs";
+// import {
+//   deleteMultipleImages,
+//   uploadMultipleImages
+// } from "../utills/cloudinary.js";
+// import mongoose from "mongoose";
+
+const Category = require("../models/categorymodel.js");
+const Product = require("../models/productmodel.js");
+const asyncHandler = require("../utills/asyncHandler.js");
+const fs = require("fs");
+const {
   deleteMultipleImages,
   uploadMultipleImages
-} from "../utills/cloudinary.js";
-import mongoose from "mongoose";
+} = require("../utills/cloudinary.js");
+const mongoose = require("mongoose");
 
 //createproduct
-export const createProduct = asyncHandler(async (req, res) => {
+const createProduct = asyncHandler(async (req, res) => {
   const {
     name,
     description,
@@ -32,11 +42,9 @@ export const createProduct = asyncHandler(async (req, res) => {
   }
 
   if (category && !mongoose.Types.ObjectId.isValid(category)) {
-    return res
-      .status(400)
-      .json({
-        error: "Invalid category. Please select a valid one or leave it empty."
-      });
+    return res.status(400).json({
+      error: "Invalid category. Please select a valid one or leave it empty."
+    });
   }
 
   const filePaths = req.files.map((file) => file.path);
@@ -118,7 +126,7 @@ async function cleanupTempFiles(filePaths) {
   await Promise.all(deletionPromises);
 }
 // Controller Function - Get All Products
-export const getAllProducts = asyncHandler(async (req, res) => {
+const getAllProducts = asyncHandler(async (req, res) => {
   try {
     const products = await Product.find().populate("category", "name");
     res.status(200).json({
@@ -135,7 +143,7 @@ export const getAllProducts = asyncHandler(async (req, res) => {
   }
 });
 
-export const getFilteredProducts = asyncHandler(async (req, res) => {
+const getFilteredProducts = asyncHandler(async (req, res) => {
   const maxPrice = Number(req.params.maxPrice) || 100000000;
   const minPrice = Number(req.params.minPrice) || 0;
   const limit = Number(req.params.limit) || 9;
@@ -172,7 +180,7 @@ export const getFilteredProducts = asyncHandler(async (req, res) => {
 });
 
 //get product by single id
-export const getProductsById = asyncHandler(async (req, res) => {
+const getProductsById = asyncHandler(async (req, res) => {
   const { singleproductid } = req.params;
   const product = await Product.findById(singleproductid);
   console.log("from get", product);
@@ -190,7 +198,7 @@ export const getProductsById = asyncHandler(async (req, res) => {
 });
 
 //deleteProduct
-export const deleteProduct = asyncHandler(async (req, res) => {
+const deleteProduct = asyncHandler(async (req, res) => {
   const { id } = req.params;
   console.log("from id", id);
   const product = await Product.findById(id);
@@ -214,7 +222,7 @@ export const deleteProduct = asyncHandler(async (req, res) => {
 });
 
 //updateProduct
-export const updateProduct = asyncHandler(async (req, res) => {
+const updateProduct = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const {
     name,
@@ -259,7 +267,7 @@ export const updateProduct = asyncHandler(async (req, res) => {
   });
 });
 
-export const getFilteredProductsQuery = asyncHandler(async (req, res) => {
+const getFilteredProductsQuery = asyncHandler(async (req, res) => {
   // Read from query parameters
   const maxPrice = Number(req.query.maxPrice) || 1000000000000;
   const minPrice = Number(req.query.minPrice) || 0;
@@ -300,3 +308,13 @@ export const getFilteredProductsQuery = asyncHandler(async (req, res) => {
     products
   });
 });
+
+module.exports = {
+  createProduct,
+  getAllProducts,
+  getFilteredProducts,
+  getProductsById,
+  deleteProduct,
+  updateProduct,
+  getFilteredProductsQuery
+};

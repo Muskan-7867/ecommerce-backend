@@ -46,5 +46,5 @@ const productSchema = new mongoose.Schema({
   deliveryCharges: {
     type: Number,
   }
-});
+}, {timestamps : true});
 export const Product = mongoose.model("Product", productSchema);

@@ -170,33 +170,7 @@ const createRazorPayOrder = asyncHandler(async (req, res) => {
           await user.save();
         }
 
-        // Prepare data for email
-        const emailData = {
-          order: {
-            _id: newOrder._id,
-            date: newOrder.createdAt.toLocaleDateString(),
-            status: "Pending",
-            items: [
-              {
-                name: product.name,
-                quantity: quantity,
-                total: productPrice
-              }
-            ],
-            subtotal: productPrice,
-            delivery: product.deliveryCharges,
-            grandTotal: totalPrice,
-            paymentMethod: paymentMethod
-          },
-          user: {
-            name: user?.username,
-            email: user?.email
-          },
-          address: address
-        };
-
-        // Send confirmation email
-        await sendOrderConfirmationEmail(emailData);
+       
 
         return res.status(201).json({
           success: true,
@@ -394,37 +368,7 @@ const createRazorPayOrderOfCart = asyncHandler(async (req, res) => {
       await user.save();
     }
 
-    // Prepare data for email confirmation
-    const emailData = {
-      order: {
-        _id: newOrder._id,
-        date: newOrder.createdAt.toLocaleDateString(),
-        status: "Pending",
-        items: products.map((product) => ({
-          name: product.name,
-          quantity: quantities[product._id] || 1,
-          total: (product.price * (quantities[product._id] || 1)).toFixed(2)
-        })),
-        subtotal: productTotal.toFixed(2),
-        delivery: roundedDeliveryCharges.toFixed(2),
-        grandTotal: totalPrice.toFixed(2),
-        paymentMethod: paymentMethod
-      },
-      user: {
-        name: user.username,
-        email: user.email
-      },
-      address: address
-    };
-
-    try {
-      // Send confirmation email
-      await sendOrderConfirmationEmail(emailData);
-    } catch (emailError) {
-      console.error("Failed to send confirmation email:", emailError);
-      // Don't fail the order if email fails, just log it
-    }
-
+    
     return res.status(200).json({
       success: true,
       order: newOrder,
@@ -481,7 +425,7 @@ const paymentVerify = asyncHandler(async (req, res) => {
       });
     }
 
-    const order = await Order.findById(orderId);
+    const order = await Order.findById(orderId).populate('orderItems.product');
     if (!order) {
       return res.status(404).json({
         success: false,
@@ -489,9 +433,17 @@ const paymentVerify = asyncHandler(async (req, res) => {
       });
     }
 
+    const user = await User.findById(req.user?._id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
     await Payment.create({
       order: order._id,
-      user: req.user?._id,
+      user: user._id,
       amount: order.totalPrice,
       razorpay_order_id,
       razorpay_payment_id,
@@ -514,8 +466,36 @@ const paymentVerify = asyncHandler(async (req, res) => {
         }
       },
       { new: true }
-    );
+    ).populate('orderItems.product');
+   const emailData = {
+      order: {
+        _id: updatedOrder._id,
+        date: updatedOrder.createdAt.toLocaleDateString(),
+        status: "Processing",
+        items: updatedOrder.orderItems.map(item => ({
+          name: item.product.name,
+          quantity: item.quantity,
+          total: (item.price * item.quantity).toFixed(2)
+        })),
+        subtotal: updatedOrder.totalPrice - updatedOrder.deliveryCharges,
+        delivery: updatedOrder.deliveryCharges,
+        grandTotal: updatedOrder.totalPrice,
+        paymentMethod: paymentMethod
+      },
+      user: {
+        name: user.username,
+        email: user.email
+      },
+      address: updatedOrder.address
+    };
 
+    // Send confirmation email
+    try {
+      await sendOrderConfirmationEmail(emailData);
+    } catch (emailError) {
+      console.error("Failed to send confirmation email:", emailError);
+      // Don't fail the request if email fails
+    }
     return res.status(200).json({
       success: true,
       message: "Order payment verified and updated successfully",

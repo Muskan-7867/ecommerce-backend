@@ -12,7 +12,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/usermodel.js");
 const asyncHandler = require("../utills/asyncHandler.js");
 const Address = require("../models/addressmodel.js");
-const sendWelcomeEmail = require("../email/emailservice.js");
+const { sendWelcomeEmail}  = require("../email/emailservice.js");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 

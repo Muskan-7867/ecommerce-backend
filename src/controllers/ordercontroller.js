@@ -425,8 +425,8 @@ const newOrder = asyncHandler(async (req, res) => {
     });
 
     // Update user's orders
-    user.orders = user.orders || [];
-    user.orders.push(order._id);
+    user.order = user.order || [];
+    user.order.push(order._id);
     await user.save();
 
     // Create product map for easy lookup

@@ -389,7 +389,8 @@ const newOrder = asyncHandler(async (req, res) => {
     deliveryCharges,
     paymentMethod
   } = req.body;
-
+  
+    const expectedDeliveryDate = calculateExpectedDeliveryDate(5, [product]);
   const order = await Order.create({
     client: req.user._id,
     quantity,
@@ -397,6 +398,7 @@ const newOrder = asyncHandler(async (req, res) => {
     totalPrice,
     totalQuantity,
     orderItems,
+    expectedDeliveryDate,
     payment,
     status,
     isPaid,

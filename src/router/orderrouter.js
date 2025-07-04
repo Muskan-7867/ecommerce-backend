@@ -19,7 +19,7 @@ orderRouter.get("/client/:orderId",  getClientByOrderId);
 orderRouter.patch('/:orderId/status', updateOrderStatus);
 orderRouter.patch('/:orderId/payment-status',  updatePaymentStatus);
 orderRouter.patch('/:orderId/payment-paid',  updatePaymentPaidStatus);
-orderRouter.get('single/:orderId', getOrdersById);
+orderRouter.get('/single/:orderId', getOrdersById);
 
 
 

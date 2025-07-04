@@ -389,36 +389,49 @@ const newOrder = asyncHandler(async (req, res) => {
     deliveryCharges,
     paymentMethod
   } = req.body;
-  
-    const expectedDeliveryDate = calculateExpectedDeliveryDate(5, [product]);
-  const order = await Order.create({
-    client: req.user._id,
-    quantity,
-    address,
-    totalPrice,
-    totalQuantity,
-    orderItems,
-    expectedDeliveryDate,
-    payment,
-    status,
-    isPaid,
-    deliveryCharges,
-    paymentMethod
-  });
-  console.log("from order controller", order);
-  const user = await User.findById(req.user._id);
-  if (user) {
-    user.order = user.order || [];
-    user.order.push(order._id);
-    await user.save();
 
+  if (!orderItems || orderItems.length === 0) {
+    res.status(400);
+    throw new Error("No order items");
+  }
+
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      res.status(404);
+      throw new Error("User not found");
+    }
+
+    // First create the order
     const products = await Product.find({
-      _id: { $in: order.orderItems.map((item) => item.product) }
-    }).select("name");
+      _id: { $in: orderItems.map((item) => item.product) }
+    }).select("name price");
+
+    const expectedDeliveryDate = calculateExpectedDeliveryDate(5, products);
+
+    const order = await Order.create({
+      client: req.user._id,
+      quantity,
+      address,
+      totalPrice,
+      totalQuantity,
+      orderItems,
+      expectedDeliveryDate,
+      payment,
+      status: status || "pending",
+      isPaid: isPaid || false,
+      deliveryCharges,
+      paymentMethod
+    });
+
+    // Update user's orders
+    user.orders = user.orders || [];
+    user.orders.push(order._id);
+    await user.save();
 
     // Create product map for easy lookup
     const productMap = products.reduce((map, product) => {
-      map[product._id] = product.name;
+      map[product._id.toString()] = product.name;
       return map;
     }, {});
 
@@ -441,26 +454,38 @@ const newOrder = asyncHandler(async (req, res) => {
           year: "numeric",
           month: "long",
           day: "numeric"
+        }),
+        expectedDeliveryDate: expectedDeliveryDate.toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric"
         })
       },
       user: {
         name: user.username,
         email: user.email
       },
-      address: address // Assuming address contains the full address string
+      address: address
     };
 
     // Send email (fire and forget)
     sendOrderConfirmationEmail(emailData).catch((error) => {
       console.error("Email sending error:", error);
     });
-  }
 
-  res.status(201).json({
-    success: true,
-    message: "Order created successfully",
-    order
-  });
+    res.status(201).json({
+      success: true,
+      message: "Order created successfully",
+      order
+    });
+
+  } catch (error) {
+    console.error("Order creation error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error creating order"
+    });
+  }
 });
 
 const getClientByOrderId = asyncHandler(async (req, res) => {
@@ -484,7 +509,8 @@ const getClientByOrderId = asyncHandler(async (req, res) => {
 const getOrderProducts = asyncHandler(async (req, res) => {
   const orders = await Order.find()
     .populate("orderItems.product")
-    .populate("payment");
+    .populate("payment")
+    .populate("expectedDeliveryDate"); 
 
   // If no orders exist for the user
   if (!orders || orders.length === 0) {
@@ -658,7 +684,8 @@ const getOrdersById = async (req, res) => {
   try {
     const order = await Order.findById(orderId)
       .populate("client")
-      .populate("orderItems.product");
+      .populate("orderItems.product")
+      .populate("expectedDeliveryDate")
 
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
@@ -669,8 +696,13 @@ const getOrdersById = async (req, res) => {
       id: order._id,
       status: order.status,
       totalPrice: order.totalPrice,
-      itemname: order.orderItems.map((item) => item.product.name),
-      quantity: order.orderItems.map((item) => item.quantity)
+      expectedDeliveryDate: order.expectedDeliveryDate, // Now populated
+      items: order.orderItems.map((item) => ({
+        name: item.product?.name || "Product not available",
+        quantity: item.quantity,
+        price: item.price
+      })),
+      createdAt: order.createdAt
     };
 
     res.json(response);

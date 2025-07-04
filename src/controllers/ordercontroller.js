@@ -24,6 +24,38 @@ const {
 
 const generateReceiptId = () => crypto.randomBytes(16).toString("hex");
 
+function calculateExpectedDeliveryDate(baseDays = 5, products = []) {
+  const deliveryDate = new Date();
+  let daysToAdd = baseDays;
+  
+  // Add business logic for delivery days calculation
+  if (products.length > 0) {
+    // Check if any product requires special handling
+    const hasSpecialProducts = products.some(product => product.requiresExtendedDelivery);
+    if (hasSpecialProducts) {
+      daysToAdd += 2; // Add extra days for special products
+    }
+    
+    // Check if products are from different locations
+    const uniqueLocations = new Set(products.map(p => p.originLocation));
+    if (uniqueLocations.size > 1) {
+      daysToAdd += 1; // Add extra day for multi-location orders
+    }
+  }
+
+  // Add business days (skip weekends)
+  let addedDays = 0;
+  while (addedDays < daysToAdd) {
+    deliveryDate.setDate(deliveryDate.getDate() + 1);
+    // Check if it's a weekend (Saturday=6, Sunday=0)
+    if (deliveryDate.getDay() !== 0 && deliveryDate.getDay() !== 6) {
+      addedDays++;
+    }
+  }
+  
+  return deliveryDate;
+}
+
 
 const createRazorPayOrder = asyncHandler(async (req, res) => {
   const { productid, address, quantity, paymentMethod } = req.body;
@@ -67,11 +99,13 @@ const createRazorPayOrder = asyncHandler(async (req, res) => {
           error
         });
       } else {
+      const expectedDeliveryDate = calculateExpectedDeliveryDate(5, [product]);
         const newOrder = await Order.create({
           client: userId,
           address,
           quantity,
           totalPrice,
+           expectedDeliveryDate,
           totalQuantity: quantity,
           deliveryCharges: product.deliveryCharges,
           orderItems: [
@@ -111,7 +145,6 @@ const createRazorPayOrder = asyncHandler(async (req, res) => {
     });
   }
 });
-
 
 const createRazorPayOrderOfCart = asyncHandler(async (req, res) => {
   const { cartProductIds, address, quantities, paymentMethod } = req.body;
@@ -178,12 +211,14 @@ const createRazorPayOrderOfCart = asyncHandler(async (req, res) => {
       });
     }
 
+ const expectedDeliveryDate = calculateExpectedDeliveryDate(5, products);
     const newOrder = await Order.create({
       client: userId,
       orderItems,
       address,
       totalQuantity,
       totalPrice,
+      expectedDeliveryDate,
       roundedDeliveryCharges,
       payment: {
         razorpay_order_id: razorpayOrder.id,

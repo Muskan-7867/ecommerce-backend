@@ -15,16 +15,8 @@ const adminSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  role: {
-    type: String,
-    required: true,
-    default: "admin",
-  },
-  totalProducts :{
-    type: Number,
-    default: 0,
-    
-  }
+ 
+
 })
 
  const Admin = mongoose.model("Admin", adminSchema);

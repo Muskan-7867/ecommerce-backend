@@ -11,7 +11,7 @@ const secret_key = process.env.JWT_SECRET_KEY || "defaultSecretKey"; // fallback
 
 // ✅ Create a new Admin
 const createAdmin = async (req, res) => {
-  const { name, email, role, password } = req.body;
+  const { name, email,  password } = req.body;
 
   try {
     // Check if admin already exists
@@ -31,7 +31,7 @@ const createAdmin = async (req, res) => {
       name,
       email,
       password: hashedPassword,
-      role
+      
     });
 
     await newAdmin.save();

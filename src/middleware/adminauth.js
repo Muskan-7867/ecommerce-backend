@@ -2,7 +2,7 @@
 // import { Admin } from "../models/admin.model.js";
 
 const jwt = require("jsonwebtoken");
-const { Admin } = require("../models/adminmodel.js");
+const  Admin  = require("../models/adminmodel.js");
 
 // Middleware to authenticate Admin via JWT
 const adminAuthenticator = async (req, res, next) => {
@@ -17,10 +17,11 @@ const adminAuthenticator = async (req, res, next) => {
   try {
     // ✅ Decode JWT using the correct secret
     const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+    console.log(decoded)
 
     // ✅ Fetch the admin using the decoded ID
     const admin = await Admin.findById(decoded._id).select(
-      "name email role _id"
+      "name email  _id"
     );
 
     if (!admin) {

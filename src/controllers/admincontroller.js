@@ -7,7 +7,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
 // Use the secret key from .env
-const secret_key = process.env.JWT_SECRET_KEY || "defaultSecretKey"; // fallback for dev
+const secret_key = process.env.JWT_SECRET_KEY || "defaultSecretKey"; 
 
 // ✅ Create a new Admin
 const createAdmin = async (req, res) => {
@@ -111,7 +111,7 @@ const getAdminInfo = async (req, res) => {
   }
 };
 
-// export { createAdmin, adminLogin, getAdminInfo };
+
 module.exports = {
   createAdmin,
   adminLogin,

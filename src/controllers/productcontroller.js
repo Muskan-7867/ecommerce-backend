@@ -271,7 +271,7 @@ const getFilteredProductsQuery = asyncHandler(async (req, res) => {
   // Read from query parameters
   const maxPrice = Number(req.query.maxPrice) || 1000000000000;
   const minPrice = Number(req.query.minPrice) || 0;
-  const limit = Number(req.query.limit) || 10;
+  const limit = Number(req.query.limit);
   const page = Number(req.query.page) || 1;
   const categoryId = req.query.category || null;
   const search = req.query.search || "";

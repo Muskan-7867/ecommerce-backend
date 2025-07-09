@@ -56,7 +56,6 @@ function calculateExpectedDeliveryDate(baseDays = 5, products = []) {
   return deliveryDate;
 }
 
-
 const createRazorPayOrder = asyncHandler(async (req, res) => {
   const { productid, address, quantity, paymentMethod } = req.body;
 
@@ -69,7 +68,7 @@ const createRazorPayOrder = asyncHandler(async (req, res) => {
 
   const userId = req.user?._id;
   const product = await Product.findById(productid);
-  const user = await User.findById(userId);
+
 
   if (!product) {
     return res.status(404).json({
@@ -122,13 +121,7 @@ const createRazorPayOrder = asyncHandler(async (req, res) => {
           }
         });
 
-        if (user) {
-          user.order = user.order || [];
-          user.order.push(newOrder._id);
-          await user.save();
-        }
-
-        return res.status(201).json({
+       return res.status(201).json({
           success: true,
           message: "Razorpay order created successfully",
           razorpayOrder: razorpayOrder,
@@ -156,7 +149,7 @@ const createRazorPayOrderOfCart = asyncHandler(async (req, res) => {
 
   // Fetch all products by IDs
   const products = await Product.find({ _id: { $in: cartProductIds } });
-  const user = await User.findById(userId);
+
 
   if (!products || products.length === 0) {
     return res
@@ -228,12 +221,7 @@ const createRazorPayOrderOfCart = asyncHandler(async (req, res) => {
       status: "pending"
     });
 
-    if (user) {
-      user.order = user.order || [];
-      user.order.push(newOrder._id);
-      await user.save();
-    }
-
+    
     return res.status(200).json({
       success: true,
       order: newOrder,
@@ -332,6 +320,11 @@ const paymentVerify = asyncHandler(async (req, res) => {
       },
       { new: true }
     ).populate("orderItems.product");
+
+     user.order = user.order || [];
+    user.order.push(updatedOrder._id);
+    await user.save();
+
     const emailData = {
       order: {
         _id: updatedOrder._id,
@@ -512,20 +505,30 @@ const getOrderProducts = asyncHandler(async (req, res) => {
     .populate("payment")
     .populate("expectedDeliveryDate"); 
 
-  // If no orders exist for the user
-  if (!orders || orders.length === 0) {
+  const filteredOrders = orders.filter(order => {
+    const isOnlinePayment = order.payment?.paymentMethod?.toLowerCase() === 'online_payment';
+    
+    if (isOnlinePayment) {
+      // For online payments, show if either payment status is success OR isPaid is true
+      return (order.payment?.paymentStatus?.toLowerCase() === 'success' || order.isPaid);
+    }
+    
+    // Include all COD orders
+    return true;
+  });
+
+  if (!filteredOrders || filteredOrders.length === 0) {
     return res.status(200).json({
       success: true,
-      message: "You have not placed any orders yet.",
-      orders: []
+      message: "No matching orders found.",
+      orders: filteredOrders
     });
   }
 
-  // If orders are found
   return res.status(200).json({
     success: true,
     message: "Orders fetched successfully.",
-    orders
+    orders: filteredOrders
   });
 });
 

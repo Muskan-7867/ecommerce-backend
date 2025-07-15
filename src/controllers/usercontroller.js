@@ -273,6 +273,64 @@ const getAllUsers = asyncHandler(async (req, res) => {
   });
 });
 
+// Delete user account
+const deleteUserAccount = asyncHandler(async (req, res) => {
+  try {
+    const userId = req.user._id; 
+    
+
+    const { password } = req.body;
+    if (!password) {
+      return res.status(400).json({ message: "Please provide password for verification" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Verify password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid password" });
+    }
+
+    // Delete associated addresses first
+    await Address.deleteMany({ user: userId });
+
+    // Then delete the user
+    await User.findByIdAndDelete(userId);
+
+    // Send confirmation email
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD
+      }
+    });
+
+    await transporter.sendMail({
+      to: user.email,
+      from: process.env.EMAIL_USER,
+      subject: "Account Deletion Confirmation",
+      html: "<p>Your account has been successfully deleted. We're sorry to see you go.</p>"
+    });
+
+    res.status(200).json({ 
+      success: true,
+      message: "User account deleted successfully" 
+    });
+  } catch (error) {
+    console.error("Error deleting user account:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Error deleting user account",
+      error: error.message 
+    });
+  }
+});
+
 module.exports = {
   userRegister,
   userLogin,
@@ -281,5 +339,6 @@ module.exports = {
   forgotPassword,
   fetchUserAddressFromId,
   getAllUsers,
-  resetPassword
+  resetPassword,
+  deleteUserAccount
 };

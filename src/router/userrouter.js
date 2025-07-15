@@ -23,7 +23,8 @@ const {
   updateUserProfile,
   userLogin,
 
-  userRegister
+  userRegister,
+  deleteUserAccount
 } = require("../controllers/usercontroller.js");
 const  createAddress  = require("../controllers/addresscontroller.js");
 const { authenticator } = require("../middleware/authenticator.js");
@@ -42,5 +43,6 @@ UserRouter.get(
   authenticator,
   fetchUserAddressFromId
 );
+UserRouter.delete("/delete", authenticator, deleteUserAccount)
 
 module.exports = { UserRouter };

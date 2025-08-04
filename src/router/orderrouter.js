@@ -5,7 +5,7 @@
 
 const express   = require("express");
 const { authenticator } = require("../middleware/authenticator.js");
-const { createRazorPayOrder, createRazorPayOrderOfCart, deleteOrderById, getClientByOrderId, getOrderProducts, getOrdersById, newOrder, paymentVerify, updateOrderStatus, updatePaymentPaidStatus, updatePaymentStatus } = require("../controllers/ordercontroller.js");
+const { createRazorPayOrder, createRazorPayOrderOfCart, deleteOrderById, getClientByOrderId, getOrderProducts, getOrdersById, newOrder, paymentVerify, updateOrderStatus, updatePaymentPaidStatus, updatePaymentStatus, cancelOrder } = require("../controllers/ordercontroller.js");
 
 const  orderRouter = express.Router();
 
@@ -20,6 +20,9 @@ orderRouter.patch('/:orderId/status', updateOrderStatus);
 orderRouter.patch('/:orderId/payment-status',  updatePaymentStatus);
 orderRouter.patch('/:orderId/payment-paid',  updatePaymentPaidStatus);
 orderRouter.get('/single/:orderId', getOrdersById);
+orderRouter.post('/cancel', cancelOrder);
+
+
 
 
 

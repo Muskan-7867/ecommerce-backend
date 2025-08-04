@@ -27,17 +27,19 @@ const generateReceiptId = () => crypto.randomBytes(16).toString("hex");
 function calculateExpectedDeliveryDate(baseDays = 5, products = []) {
   const deliveryDate = new Date();
   let daysToAdd = baseDays;
-  
+
   // Add business logic for delivery days calculation
   if (products.length > 0) {
     // Check if any product requires special handling
-    const hasSpecialProducts = products.some(product => product.requiresExtendedDelivery);
+    const hasSpecialProducts = products.some(
+      (product) => product.requiresExtendedDelivery
+    );
     if (hasSpecialProducts) {
       daysToAdd += 2; // Add extra days for special products
     }
-    
+
     // Check if products are from different locations
-    const uniqueLocations = new Set(products.map(p => p.originLocation));
+    const uniqueLocations = new Set(products.map((p) => p.originLocation));
     if (uniqueLocations.size > 1) {
       daysToAdd += 1; // Add extra day for multi-location orders
     }
@@ -52,7 +54,7 @@ function calculateExpectedDeliveryDate(baseDays = 5, products = []) {
       addedDays++;
     }
   }
-  
+
   return deliveryDate;
 }
 
@@ -68,7 +70,6 @@ const createRazorPayOrder = asyncHandler(async (req, res) => {
 
   const userId = req.user?._id;
   const product = await Product.findById(productid);
-
 
   if (!product) {
     return res.status(404).json({
@@ -98,13 +99,15 @@ const createRazorPayOrder = asyncHandler(async (req, res) => {
           error
         });
       } else {
-      const expectedDeliveryDate = calculateExpectedDeliveryDate(5, [product]);
+        const expectedDeliveryDate = calculateExpectedDeliveryDate(5, [
+          product
+        ]);
         const newOrder = await Order.create({
           client: userId,
           address,
           quantity,
           totalPrice,
-           expectedDeliveryDate,
+          expectedDeliveryDate,
           totalQuantity: quantity,
           deliveryCharges: product.deliveryCharges,
           orderItems: [
@@ -121,7 +124,7 @@ const createRazorPayOrder = asyncHandler(async (req, res) => {
           }
         });
 
-       return res.status(201).json({
+        return res.status(201).json({
           success: true,
           message: "Razorpay order created successfully",
           razorpayOrder: razorpayOrder,
@@ -149,7 +152,6 @@ const createRazorPayOrderOfCart = asyncHandler(async (req, res) => {
 
   // Fetch all products by IDs
   const products = await Product.find({ _id: { $in: cartProductIds } });
-
 
   if (!products || products.length === 0) {
     return res
@@ -204,7 +206,7 @@ const createRazorPayOrderOfCart = asyncHandler(async (req, res) => {
       });
     }
 
- const expectedDeliveryDate = calculateExpectedDeliveryDate(5, products);
+    const expectedDeliveryDate = calculateExpectedDeliveryDate(5, products);
     const newOrder = await Order.create({
       client: userId,
       orderItems,
@@ -221,7 +223,6 @@ const createRazorPayOrderOfCart = asyncHandler(async (req, res) => {
       status: "pending"
     });
 
-    
     return res.status(200).json({
       success: true,
       order: newOrder,
@@ -321,7 +322,7 @@ const paymentVerify = asyncHandler(async (req, res) => {
       { new: true }
     ).populate("orderItems.product");
 
-     user.order = user.order || [];
+    user.order = user.order || [];
     user.order.push(updatedOrder._id);
     await user.save();
 
@@ -471,7 +472,6 @@ const newOrder = asyncHandler(async (req, res) => {
       message: "Order created successfully",
       order
     });
-
   } catch (error) {
     console.error("Order creation error:", error);
     res.status(500).json({
@@ -499,20 +499,82 @@ const getClientByOrderId = asyncHandler(async (req, res) => {
   });
 });
 
+const cancelOrder = asyncHandler(async (req, res) => {
+  const { orderId } = req.body;
+
+  if (!orderId) {
+    return res.status(400).json({
+      success: false,
+      message: "Order ID is required"
+    });
+  }
+
+  try {
+    const order = await Order.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+
+    // Check if order can be cancelled
+    if (order.status !== "pending" && order.status !== "processing") {
+      return res.status(400).json({
+        success: false,
+        message: "Order cannot be cancelled at this stage"
+      });
+    }
+
+     const user = await User.findById(order.client);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    order.status = "cancelled";
+    await order.save();
+
+    user.order = user.order.filter(
+      (id) => id.toString() !== orderId.toString()
+    );
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Order cancelled successfully",
+      order: order
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Server error: " + error.message
+    });
+  }
+});
+
 const getOrderProducts = asyncHandler(async (req, res) => {
   const orders = await Order.find()
     .populate("orderItems.product")
     .populate("payment")
-    .populate("expectedDeliveryDate"); 
+    .populate("expectedDeliveryDate");
 
-  const filteredOrders = orders.filter(order => {
-    const isOnlinePayment = order.payment?.paymentMethod?.toLowerCase() === 'online_payment';
-    
+  const filteredOrders = orders.filter((order) => {
+    const isOnlinePayment =
+      order.payment?.paymentMethod?.toLowerCase() === "online_payment";
+
     if (isOnlinePayment) {
       // For online payments, show if either payment status is success OR isPaid is true
-      return (order.payment?.paymentStatus?.toLowerCase() === 'success' || order.isPaid);
+      return (
+        order.payment?.paymentStatus?.toLowerCase() === "success" ||
+        order.isPaid
+      );
     }
-    
+
     // Include all COD orders
     return true;
   });
@@ -688,7 +750,7 @@ const getOrdersById = async (req, res) => {
     const order = await Order.findById(orderId)
       .populate("client")
       .populate("orderItems.product")
-      .populate("expectedDeliveryDate")
+      .populate("expectedDeliveryDate");
 
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
@@ -726,5 +788,6 @@ module.exports = {
   updateOrderStatus,
   updatePaymentStatus,
   updatePaymentPaidStatus,
-  getOrdersById
+  getOrdersById,
+  cancelOrder
 };

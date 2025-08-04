@@ -20,46 +20,49 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: true,
-      minlength: 6
+      required: true
     },
-    
-  
+    isVerified: {
+      type: Boolean,
+      default: false
+    },
+    otp: String,
+    otpExpires: Date,
     role: {
       type: String,
       enum: ["admin", "user"],
       default: "user"
     },
- 
     address: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Address"
     },
-
-    order: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Order"
-    }],
+    order: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Order"
+      }
+    ],
     resetPasswordToken: String,
-    resetPasswordExpire: Date,
+    resetPasswordExpire: Date
   },
   { timestamps: true }
 );
 // In your User model file
-userSchema.methods.generatePasswordResetToken = function() {
+userSchema.methods.generatePasswordResetToken = function () {
   // Generate token
-  const resetToken = crypto.randomBytes(20).toString('hex');
-  
+  const resetToken = crypto.randomBytes(20).toString("hex");
+
   // Hash token and set to resetPasswordToken field
   this.resetPasswordToken = crypto
-    .createHash('sha256')
+    .createHash("sha256")
     .update(resetToken)
-    .digest('hex');
-  
+    .digest("hex");
+
   // Set expire time (1 hour from now)
   this.resetPasswordExpire = Date.now() + 3600000; // 1 hour
-  
+
   return resetToken;
 };
 const User = mongoose.model("User", userSchema);
-module.exports =  User;
+module.exports = User;

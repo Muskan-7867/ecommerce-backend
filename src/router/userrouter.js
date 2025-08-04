@@ -24,7 +24,10 @@ const {
   userLogin,
 
   userRegister,
-  deleteUserAccount
+  deleteUserAccount,
+  userRegisterApp,
+  verifyOtp,
+  resendOtp
 } = require("../controllers/usercontroller.js");
 const  createAddress  = require("../controllers/addresscontroller.js");
 const { authenticator } = require("../middleware/authenticator.js");
@@ -44,5 +47,11 @@ UserRouter.get(
   fetchUserAddressFromId
 );
 UserRouter.delete("/delete", authenticator, deleteUserAccount)
+UserRouter.post("/registerapp", userRegisterApp);
+UserRouter.post("/verify", verifyOtp);
+UserRouter.post("/resendotp", resendOtp);
+
+
+
 
 module.exports = { UserRouter };

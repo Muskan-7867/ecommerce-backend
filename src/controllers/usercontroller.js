@@ -3,7 +3,11 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/usermodel.js");
 const asyncHandler = require("../utills/asyncHandler.js");
 const Address = require("../models/addressmodel.js");
-const { sendWelcomeEmail } = require("../email/emailservice.js");
+const {
+  sendWelcomeEmail,
+  sendVerificationEmail,
+  sendGenericEmail
+} = require("../email/emailservice.js");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 const mongoose = require("mongoose");
@@ -56,23 +60,33 @@ const userRegister = asyncHandler(async (req, res) => {
   });
 
   // Send welcome email (don't wait for it to complete)
-  sendWelcomeEmail({
-    username: user.username,
-    email: user.email
-  }).catch((error) => {
-    console.error("Failed to send welcome email:", error);
-    // Don't fail the registration if email fails
-  });
+  let emailSent = false;
+  try {
+    const emailResult = await sendWelcomeEmail({
+      username: user.username,
+      email: user.email
+    });
+    emailSent = emailResult.success;
 
-  // Respond with token and user info
+    if (!emailSent) {
+      console.error("Email failed but registration completed:", emailResult);
+    }
+  } catch (emailError) {
+    console.error("Email sending crashed:", emailError);
+  }
+
+  // Response with email status
   res.status(201).json({
-    message: "User registered successfully! and Email send Successfully!!!",
+    message: emailSent
+      ? "User registered successfully! Welcome email sent."
+      : "User registered successfully! Welcome email failed to send.",
     token,
     user: {
       id: user._id,
       username: user.username,
       email: user.email
-    }
+    },
+    emailSent
   });
 });
 
@@ -142,54 +156,62 @@ const forgotPassword = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    console.log("from forgot", user);
+
     // 2. Generate reset token
-    const token = crypto.randomBytes(20).toString("hex");
-    console.log("from forgot password", token);
+    const token = crypto.randomBytes(20).toString('hex');
     user.resetPasswordToken = token;
-    user.resetPasswordExpire = Date.now() + 3600000;
-    console.log("Saving token to user:", token);
+    user.resetPasswordExpire = Date.now() + 3600000; // 1 hour
     await user.save();
-    console.log("User after save:", user);
-    const updatedUser = await User.findOne({ email });
-    console.log("Saved token:", updatedUser.resetPasswordToken);
 
     // 3. Send email with reset link
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD
-      }
-    });
-    const baseUrl = ["https://omeg-bazaar-client.vercel.app" , "https://omegbazaar.com"]
-    console.log("base url", baseUrl);
+    const baseUrl = [req.headers.origin || "https://omeg-bazaar-client.vercel.app",  "https://omegbazaar.com"]
     const resetUrl = `${baseUrl}/resetpassword/${token}`;
 
-    await transporter.sendMail({
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+        <h2 style="color: #4a4a4a;">Password Reset Request</h2>
+        <p>You have requested to reset your password. Click the button below to proceed:</p>
+        
+        <div style="text-align: center; margin: 25px 0;">
+          <a href="${resetUrl}" 
+             style="background-color: #4CAF50; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+            Reset Password
+          </a>
+        </div>
+        
+        <p>Or copy and paste this link into your browser:</p>
+        <p style="word-break: break-all;">${resetUrl}</p>
+        
+        <p style="font-size: 14px; color: #666;">
+          This link will expire in 1 hour. If you didn't request a password reset, please ignore this email.
+        </p>
+        
+        <p style="margin-top: 30px;">Best regards,<br/>The Omeg-Bazaar Team</p>
+      </div>
+    `;
+
+    // Use the sendGenericEmail function
+    const emailResult = await sendGenericEmail({
       to: user.email,
-      from: process.env.EMAIL_USER,
-      // from: "anil@omenterprisesgroup.in",
-      subject: "Password Reset Request",
-      html: `
-        <p>You requested a password reset</p>
-        <p >Click this <a href="${resetUrl}">link</a> to reset your password</p>
-        <p>This link will expire in 1 hour</p>
-      `
+      subject: 'Password Reset Request',
+      html
     });
+
+    if (!emailResult.success) {
+      console.error('Failed to send password reset email:', emailResult.message);
+      return res.status(500).json({ message: "Failed to send password reset email" });
+    }
 
     res.status(200).json({ message: "Password reset email sent" });
   } catch (error) {
-    console.error(error);
+    console.error("Password reset error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
-
 // Reset password
 const resetPassword = async (req, res) => {
   try {
     const { token } = req.params;
-    console.log("from backend resetpassword", token);
     const { newPassword } = req.body;
 
     // 1. Find user with valid token
@@ -197,39 +219,50 @@ const resetPassword = async (req, res) => {
       resetPasswordToken: token,
       resetPasswordExpire: { $gt: Date.now() }
     });
-    console.log("from backend resetpassword", user);
+
     if (!user) {
       return res.status(400).json({ message: "Invalid or expired token" });
     }
+
     // 2. Update password and clear token
-    // Hash the password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
 
     user.password = hashedPassword;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
-
     await user.save();
+
     // 3. Send confirmation email
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD
-      }
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+        <h2 style="color: #4a4a4a;">Password Changed Successfully</h2>
+        <p>Your password has been successfully updated.</p>
+        
+        <p>If you didn't make this change, please contact our support team immediately.</p>
+        
+        <div style="margin-top: 30px; padding: 15px; background-color: #f5f5f5; border-radius: 5px;">
+          <p><strong>Security Tip:</strong> Always use a strong, unique password and never share it with anyone.</p>
+        </div>
+        
+        <p style="margin-top: 30px;">Best regards,<br/>The Omeg-Bazaar Team</p>
+      </div>
+    `;
+
+    const emailResult = await sendGenericEmail({
+      to: user.email,
+      subject: 'Password Changed Successfully',
+      html
     });
 
-    await transporter.sendMail({
-      to: user.email,
-      from: process.env.EMAIL_USER,
-      subject: "Password Changed Successfully",
-      html: "<p>Your password has been successfully changed</p>"
-    });
+    if (!emailResult.success) {
+      console.error('Failed to send password change confirmation:', emailResult.message);
+      // Don't fail the request just because email couldn't be sent
+    }
 
     res.status(200).json({ message: "Password updated successfully" });
   } catch (error) {
-    console.error(error);
+    console.error("Password reset error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -328,57 +361,31 @@ const generateOtp = () => {
   return Math.floor(1000 + Math.random() * 9000).toString(); // 4-digit OTP
 };
 
-const sendVerificationEmail = async (email, otp) => {
-  try {
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD
-      }
-    });
-
-    await transporter.sendMail({
-      to: email,
-      from: process.env.EMAIL_USER,
-      subject: "Email Verification OTP",
-      html: `
-        <p>Your verification code is: <strong>${otp}</strong></p>
-        <p>This code will expire in 10 minutes.</p>
-      `
-    });
-    return true;
-  } catch (error) {
-    console.error("Error sending verification email:", error);
-    return false;
-  }
-};
-
 const userRegisterApp = asyncHandler(async (req, res) => {
   const { username, email, password } = req.body;
 
   // Validate input
   if (!username || !email || !password) {
-    return res.status(400).json({ 
+    return res.status(400).json({
       success: false,
-      message: "Please provide all fields: username, email, and password." 
+      message: "Please provide all fields: username, email, and password."
     });
   }
 
   // Validate username
   if (username.length < 3) {
-    return res.status(400).json({ 
+    return res.status(400).json({
       success: false,
-      message: "Username must be at least 3 characters long." 
+      message: "Username must be at least 3 characters long."
     });
   }
 
   // Validate email
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
-    return res.status(400).json({ 
+    return res.status(400).json({
       success: false,
-      message: "Invalid email format." 
+      message: "Invalid email format."
     });
   }
 
@@ -388,7 +395,8 @@ const userRegisterApp = asyncHandler(async (req, res) => {
   if (!passwordRegex.test(password)) {
     return res.status(400).json({
       success: false,
-      message: "Password must be at least 8 characters with uppercase, lowercase, number, and special character."
+      message:
+        "Password must be at least 8 characters with uppercase, lowercase, number, and special character."
     });
   }
 
@@ -396,9 +404,9 @@ const userRegisterApp = asyncHandler(async (req, res) => {
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(409).json({ 
+      return res.status(409).json({
         success: false,
-        message: "User already exists with this email." 
+        message: "User already exists with this email."
       });
     }
 
@@ -419,24 +427,39 @@ const userRegisterApp = asyncHandler(async (req, res) => {
     // Send verification email
     try {
       await sendVerificationEmail(email, otp);
+      
+      // Return success response with user ID after successful email sending
+      return res.status(201).json({
+        success: true,
+        userId: user._id,
+        message: "User registered successfully. Verification email sent."
+      });
+      
     } catch (emailError) {
+      console.error("Verification email failed:", {
+        error: emailError,
+        email: email,
+        otp: otp,
+        time: new Date().toISOString()
+      });
+
       await User.deleteOne({ _id: user._id });
-      return res.status(500).json({ 
+
+      return res.status(500).json({
         success: false,
-        message: "Failed to send verification email." 
+        message: "Failed to send verification email.",
+        systemMessage: emailError.message // Only in development!
       });
     }
-
-    res.status(201).json({
-      success: true,
-      message: "Verification OTP sent to your email. Please verify to complete registration.",
-      userId: user._id
-    });
   } catch (error) {
-    console.error("Registration error:", error);
-    res.status(500).json({ 
+    console.error("Registration error:", {
+      error: error,
+      input: { username, email },
+      time: new Date().toISOString()
+    });
+    return res.status(500).json({
       success: false,
-      message: "Internal server error during registration" 
+      message: "Internal server error during registration"
     });
   }
 });
@@ -446,16 +469,16 @@ const verifyOtp = asyncHandler(async (req, res) => {
 
   // Validate input
   if (!userId || !otp) {
-    return res.status(400).json({ 
+    return res.status(400).json({
       success: false,
-      message: "User ID and OTP are required." 
+      message: "User ID and OTP are required."
     });
   }
 
   if (otp.length !== 4 || !/^\d+$/.test(otp)) {
-    return res.status(400).json({ 
+    return res.status(400).json({
       success: false,
-      message: "OTP must be a 4-digit number." 
+      message: "OTP must be a 4-digit number."
     });
   }
 
@@ -474,9 +497,9 @@ const verifyOtp = asyncHandler(async (req, res) => {
     }
 
     if (user.otp !== otp) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: "Invalid OTP." 
+        message: "Invalid OTP."
       });
     }
 
@@ -500,7 +523,7 @@ const verifyOtp = asyncHandler(async (req, res) => {
     sendWelcomeEmail({
       username: user.username,
       email: user.email
-    }).catch(error => console.error("Welcome email error:", error));
+    }).catch((error) => console.error("Welcome email error:", error));
 
     res.status(200).json({
       success: true,
@@ -515,9 +538,9 @@ const verifyOtp = asyncHandler(async (req, res) => {
     });
   } catch (error) {
     console.error("Verification error:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: "Internal server error during verification" 
+      message: "Internal server error during verification"
     });
   }
 });
@@ -526,26 +549,26 @@ const resendOtp = asyncHandler(async (req, res) => {
   const { userId } = req.body;
 
   if (!userId) {
-    return res.status(400).json({ 
+    return res.status(400).json({
       success: false,
-      message: "User ID is required." 
+      message: "User ID is required."
     });
   }
 
   try {
     const user = await User.findById(userId);
-    
+
     if (!user) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: "User not found." 
+        message: "User not found."
       });
     }
 
     if (user.isVerified) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: "User is already verified." 
+        message: "User is already verified."
       });
     }
 
@@ -562,9 +585,9 @@ const resendOtp = asyncHandler(async (req, res) => {
     try {
       await sendVerificationEmail(user.email, otp);
     } catch (emailError) {
-      return res.status(500).json({ 
+      return res.status(500).json({
         success: false,
-        message: "Failed to resend verification email." 
+        message: "Failed to resend verification email."
       });
     }
 
@@ -575,9 +598,9 @@ const resendOtp = asyncHandler(async (req, res) => {
     });
   } catch (error) {
     console.error("Resend OTP error:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: "Internal server error while resending OTP" 
+      message: "Internal server error while resending OTP"
     });
   }
 });
@@ -592,7 +615,7 @@ module.exports = {
   getAllUsers,
   resetPassword,
   deleteUserAccount,
-   verifyOtp,
+  verifyOtp,
   resendOtp,
   userRegisterApp
 };

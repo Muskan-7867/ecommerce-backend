@@ -35,6 +35,29 @@ const transporter = require("./transporter.js");
   });
 };
 
+const sendVerificationEmail = async (email, otp) => {
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+      <h2 style="color: #4a4a4a;">Email Verification</h2>
+      <p>Thank you for registering with us. Please verify your email address by entering the following OTP:</p>
+      
+      <div style="background-color: #f5f5f5; padding: 15px; margin: 20px 0; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 2px;">
+        ${otp}
+      </div>
+      
+      <p style="font-size: 14px; color: #666;">This OTP will expire in 10 minutes. If you didn't request this, please ignore this email.</p>
+      
+      <p style="margin-top: 30px;">Best regards,<br/>The Team</p>
+    </div>
+  `;
+
+  return sendGenericEmail({
+    to: email,
+    subject: 'Verify Your Email Address',
+    html
+  });
+};
+
 
  const sendWelcomeEmail = async (userData) => {
   const html = `
@@ -193,4 +216,4 @@ const sendOrderStatusUpdateEmail = async (data) => {
   });
 };
 
-module.exports =  { sendContactEmail, sendWelcomeEmail, sendGenericEmail , sendOrderConfirmationEmail, sendOrderStatusUpdateEmail}
+module.exports =  { sendContactEmail, sendWelcomeEmail, sendGenericEmail , sendOrderConfirmationEmail, sendOrderStatusUpdateEmail, sendVerificationEmail}

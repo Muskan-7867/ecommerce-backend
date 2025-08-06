@@ -1,17 +1,4 @@
-// import { Router } from "express";
-// import {
-//   fetchUserAddressFromId,
-//   forgotPassword,
-//   getAllUsers,
-//   getUser,
-//   resetPassword,
-//   updateUserProfile,
-//   userLogin,
 
-//   userRegister
-// } from "../controllers/user.controller.js";
-// import { createAddress } from "../controllers/address.controller.js";
-// import { authenticator } from "../middleware/authenticator.js";
 
 const express   = require("express");
 const {

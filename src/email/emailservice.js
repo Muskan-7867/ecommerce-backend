@@ -63,7 +63,7 @@ const sendVerificationEmail = async (email, otp) => {
   const html = `
     <h2>Welcome to Omeg-Bazaar, ${userData.username}!</h2>
     <p>Thank you for registering with us. Your account has been successfully created.</p>
-    <p>Here are your account details:</p>
+    
   
     <p>If you have any questions, feel free to contact our support team.</p>
     <p>Best regards,<br/>The Team</p>

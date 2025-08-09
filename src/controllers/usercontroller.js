@@ -158,14 +158,14 @@ const forgotPassword = async (req, res) => {
     }
 
     // 2. Generate reset token
-    const token = crypto.randomBytes(20).toString('hex');
+    const token = crypto.randomBytes(20).toString("hex");
     user.resetPasswordToken = token;
     user.resetPasswordExpire = Date.now() + 3600000; // 1 hour
     await user.save();
 
     // 3. Send email with reset link
-    const baseUrl = [req.headers.origin || "https://omeg-bazaar-client.vercel.app",  "https://omegbazaar.com"]
-    const resetUrl = `${baseUrl}/resetpassword/${token}`;
+    // const baseUrl = ["https://omegbazaar.com"]
+    const resetUrl = `https://omegbazaar.com/resetpassword/${token}`;
 
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
@@ -179,8 +179,7 @@ const forgotPassword = async (req, res) => {
           </a>
         </div>
         
-        <p>Or copy and paste this link into your browser:</p>
-        <p style="word-break: break-all;">${resetUrl}</p>
+ 
         
         <p style="font-size: 14px; color: #666;">
           This link will expire in 1 hour. If you didn't request a password reset, please ignore this email.
@@ -193,13 +192,18 @@ const forgotPassword = async (req, res) => {
     // Use the sendGenericEmail function
     const emailResult = await sendGenericEmail({
       to: user.email,
-      subject: 'Password Reset Request',
+      subject: "Password Reset Request",
       html
     });
 
     if (!emailResult.success) {
-      console.error('Failed to send password reset email:', emailResult.message);
-      return res.status(500).json({ message: "Failed to send password reset email" });
+      console.error(
+        "Failed to send password reset email:",
+        emailResult.message
+      );
+      return res
+        .status(500)
+        .json({ message: "Failed to send password reset email" });
     }
 
     res.status(200).json({ message: "Password reset email sent" });
@@ -251,12 +255,15 @@ const resetPassword = async (req, res) => {
 
     const emailResult = await sendGenericEmail({
       to: user.email,
-      subject: 'Password Changed Successfully',
+      subject: "Password Changed Successfully",
       html
     });
 
     if (!emailResult.success) {
-      console.error('Failed to send password change confirmation:', emailResult.message);
+      console.error(
+        "Failed to send password change confirmation:",
+        emailResult.message
+      );
       // Don't fail the request just because email couldn't be sent
     }
 
@@ -414,11 +421,15 @@ const userRegisterApp = asyncHandler(async (req, res) => {
     const otp = generateOtp();
     const otpExpires = Date.now() + 600000;
 
-    // Create unverified user
+    // Hash the password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Create unverified user with hashed password
     const user = await User.create({
       username,
       email,
-      password, // Will be hashed after verification
+      password: hashedPassword, // Store the hashed password
       otp,
       otpExpires,
       isVerified: false
@@ -427,14 +438,13 @@ const userRegisterApp = asyncHandler(async (req, res) => {
     // Send verification email
     try {
       await sendVerificationEmail(email, otp);
-      
+
       // Return success response with user ID after successful email sending
       return res.status(201).json({
         success: true,
         userId: user._id,
         message: "User registered successfully. Verification email sent."
       });
-      
     } catch (emailError) {
       console.error("Verification email failed:", {
         error: emailError,

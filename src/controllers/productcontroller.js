@@ -14,7 +14,8 @@ const asyncHandler = require("../utills/asyncHandler.js");
 const fs = require("fs");
 const {
   deleteMultipleImages,
-  uploadMultipleFiles
+  uploadMultipleFiles,
+  uploadImage
 } = require("../utills/cloudinary.js");
 const mongoose = require("mongoose");
 
@@ -298,7 +299,7 @@ const updateProduct = asyncHandler(async (req, res) => {
     // Handle images
     if (req.files.images && req.files.images.length > 0) {
       const imagePaths = req.files.images.map((f) => f.path);
-      const uploadedImages = await uploadMultipleImages(imagePaths, "uploads");
+      const uploadedImages = await uploadMultipleFiles(imagePaths, "uploads");
 
       // Delete old images from Cloudinary
       if (product.images?.length > 0) {

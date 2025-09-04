@@ -58,7 +58,11 @@ productRouter.get(
 );
 productRouter.get("/all", getAllProducts);
 productRouter.get("/single/:singleproductid", getProductsById);
-productRouter.put("/update/:id", updateProduct);
+productRouter.put("/update/:id", upload.fields([
+  { name: "images", maxCount: 5 },
+  { name: "videos", maxCount: 2 }
+]), updateProduct);
+
 productRouter.post("/cartproducts", getCartProducts);
 productRouter.post("/category", upload.array("images"), AddCategory);
 productRouter.get("/categoryid/:Id", getProductByCategoryId);

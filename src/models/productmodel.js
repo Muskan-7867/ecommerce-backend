@@ -30,6 +30,18 @@ const productSchema = new mongoose.Schema({
       }
     }
   ],
+ videos: [
+      {
+        publicId: {
+          type: String,
+          required: true,
+        },
+        url: {
+          type: String,
+          required: true,
+        },
+      },
+    ],
   originalPrice: {
     type: Number,
     

@@ -14,7 +14,7 @@ const asyncHandler = require("../utills/asyncHandler.js");
 const fs = require("fs");
 const {
   deleteMultipleImages,
-  uploadMultipleImages
+  uploadMultipleFiles
 } = require("../utills/cloudinary.js");
 const mongoose = require("mongoose");
 
@@ -37,37 +37,50 @@ const createProduct = asyncHandler(async (req, res) => {
       .json({ error: "Please fill all the required fields" });
   }
 
-  if (!req.files || req.files.length === 0) {
-    return res.status(400).json({ error: "Please upload at least one image" });
+  if ((!req.files || (!req.files.images && !req.files.videos))) {
+    return res
+      .status(400)
+      .json({ error: "Please upload at least one image or video" });
   }
 
-  if (category && !mongoose.Types.ObjectId.isValid(category)) {
-    return res.status(400).json({
-      error: "Invalid category. Please select a valid one or leave it empty."
-    });
-  }
+  // Handle images
+  const imagePaths = req.files.images ? req.files.images.map((f) => f.path) : [];
+  const videoPaths = req.files.videos ? req.files.videos.map((f) => f.path) : [];
 
-  const filePaths = req.files.map((file) => file.path);
-  let uploadResults;
+  let uploadedImages = [];
+  let uploadedVideos = [];
 
   try {
-    uploadResults = await uploadMultipleImages(filePaths, "uploads");
+    // Upload images
+    if (imagePaths.length > 0) {
+      const uploadResults = await uploadMultipleFiles(imagePaths, "uploads");
+      uploadedImages = uploadResults.map((result) => ({
+        publicId: result.public_id,
+        url: result.secure_url,
+      }));
+    }
 
-    const images = uploadResults.map((result) => ({
-      publicId: result.public_id,
-      url: result.secure_url
-    }));
+    // Upload videos
+    if (videoPaths.length > 0) {
+      const uploadResults = await uploadMultipleVideos(videoPaths, "uploads");
+      uploadedVideos = uploadResults.map((result) => ({
+        publicId: result.public_id,
+        url: result.secure_url,
+      }));
+    }
 
+    // Create product
     const product = await Product.create({
       name,
       description,
       price,
       features,
-      images,
+      images: uploadedImages,
+      videos: uploadedVideos,
       inStock,
       originalPrice,
       category: category || undefined,
-      deliveryCharges
+      deliveryCharges,
     });
 
     if (category) {
@@ -82,20 +95,45 @@ const createProduct = asyncHandler(async (req, res) => {
     res.status(201).json({
       success: true,
       message: "Product created successfully",
-      product
+      product,
     });
   } catch (error) {
-    // Clean up any uploaded images if product creation fails
-    if (uploadResults) {
-      // Implement a function to delete uploaded images from cloud storage
-      await deleteMultipleImages(uploadResults.map((r) => r.public_id));
+    // Clean up if upload fails
+    if (uploadedImages.length > 0) {
+      await deleteMultipleImages(uploadedImages.map((r) => r.publicId));
     }
-    throw error; // Let asyncHandler handle it
+    if (uploadedVideos.length > 0) {
+      await deleteMultipleVideos(uploadedVideos.map((r) => r.publicId));
+    }
+    throw error;
   } finally {
-    // Clean up temp files regardless of success/failure
-    await cleanupTempFiles(filePaths);
+    // Always clean local files
+    await cleanupTempFiles([...imagePaths, ...videoPaths]);
   }
 });
+
+// Video uploader helper
+async function uploadMultipleVideos(filePaths, folder) {
+  const cloudinary = require("cloudinary").v2;
+  return Promise.all(
+    filePaths.map((path) =>
+      cloudinary.uploader.upload(path, {
+        resource_type: "video",
+        folder,
+      })
+    )
+  );
+}
+
+async function deleteMultipleVideos(publicIds) {
+  const cloudinary = require("cloudinary").v2;
+  return Promise.all(
+    publicIds.map((id) =>
+      cloudinary.uploader.destroy(id, { resource_type: "video" })
+    )
+  );
+}
+
 
 async function cleanupTempFiles(filePaths) {
   if (!filePaths) return;
@@ -231,41 +269,86 @@ const updateProduct = asyncHandler(async (req, res) => {
     features,
     inStock,
     category,
-    deliveryCharges
+    deliveryCharges,
   } = req.body;
 
-  console.log(
-    "from bakcend",
-    name,
-    description,
-    price,
-    features,
-    inStock,
-    category,
-    deliveryCharges
-  );
-
+  // Find product
   const product = await Product.findById(id);
   if (!product) {
     return res.status(404).json({
       success: false,
-      message: "product not found"
+      message: "Product not found",
     });
   }
+
+  // Update text fields
   product.name = name || product.name;
-  (product.description = description || product.description),
-    (product.price = price || product.price),
-    (product.features = features || product.features),
-    (product.inStock = inStock || product.inStock),
-    (product.category = category || product.category),
-    (product.deliveryCharges = deliveryCharges || product.deliveryCharges);
+  product.description = description || product.description;
+  product.price = price || product.price;
+  product.features = features || product.features;
+  product.inStock = inStock !== undefined ? inStock : product.inStock;
+  product.category = category || product.category;
+  product.deliveryCharges =
+    deliveryCharges !== undefined
+      ? deliveryCharges
+      : product.deliveryCharges;
+
+  // Handle file uploads (multer puts them in req.files)
+  if (req.files) {
+    // Handle images
+    if (req.files.images && req.files.images.length > 0) {
+      const imagePaths = req.files.images.map((f) => f.path);
+      const uploadedImages = await uploadMultipleImages(imagePaths, "uploads");
+
+      // Delete old images from Cloudinary
+      if (product.images?.length > 0) {
+        await deleteMultipleImages(product.images.map((img) => img.publicId));
+      }
+
+      // Replace with new images
+      product.images = uploadedImages.map((result) => ({
+        publicId: result.public_id,
+        url: result.secure_url,
+      }));
+
+      // Cleanup temp files
+      await cleanupTempFiles(imagePaths);
+    }
+
+    // Handle videos
+    if (req.files.videos && req.files.videos.length > 0) {
+      const videoPaths = req.files.videos.map((f) => f.path);
+      const uploadedVideos = await Promise.all(
+        videoPaths.map((path) =>
+          uploadImage(path, "uploads") // uploadImage handles videos too (resource_type: "auto")
+        )
+      );
+
+      // Delete old videos from Cloudinary
+      if (product.videos?.length > 0) {
+        await deleteMultipleImages(product.videos.map((vid) => vid.publicId));
+      }
+
+      // Replace with new videos
+      product.videos = uploadedVideos.map((result) => ({
+        publicId: result.public_id,
+        url: result.secure_url,
+      }));
+
+      // Cleanup temp files
+      await cleanupTempFiles(videoPaths);
+    }
+  }
+
   await product.save();
+
   res.status(200).json({
     success: true,
     message: "Product updated successfully",
-    product
+    product,
   });
 });
+
 
 const getFilteredProductsQuery = asyncHandler(async (req, res) => {
   // Read from query parameters

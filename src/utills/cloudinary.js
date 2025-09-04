@@ -26,15 +26,27 @@ const uploadImage = async (filePath, folder = "/src/uploads") => {
   }
 };
 
-const uploadMultipleImages = async (filePaths, folder = "src/uploads") => {
+const uploadFile = async (filePath, folder = "src/uploads") => {
+  try {
+    const result = await cloudinary.uploader.upload(filePath, {
+      folder,
+      resource_type: "auto", 
+    });
+    return result;
+  } catch (error) {
+    console.error("Error uploading to Cloudinary:", error);
+    throw error;
+  }
+};
+
+const uploadMultipleFiles = async (filePaths, folder = "src/uploads") => {
   try {
     const uploadPromises = filePaths.map((filePath) =>
-      uploadImage(filePath, folder)
+      uploadFile(filePath, folder)
     );
     return await Promise.all(uploadPromises);
-    
   } catch (error) {
-    console.error("Error uploading multiple images:", error);
+    console.error("Error uploading multiple files:", error);
     throw error;
   }
 };
@@ -59,6 +71,6 @@ const deleteMultipleImages = async(data) => {
 }
 module.exports =  {
   uploadImage,
-  uploadMultipleImages,
+  uploadMultipleFiles,
   deleteMultipleImages
 };

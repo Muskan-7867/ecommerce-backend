@@ -6,7 +6,7 @@
 const asyncHandler = require("../utills/asyncHandler.js");
 const Category = require("../models/categorymodel.js");
 const fs = require("fs");
-const { uploadMultipleImages } = require("../utills/cloudinary.js");
+const { uploadMultipleFiles } = require("../utills/cloudinary.js");
 
 const AddCategory = asyncHandler(async (req, res) => {
   const { name, description, products, approved } = req.body;
@@ -23,7 +23,7 @@ const AddCategory = asyncHandler(async (req, res) => {
   console.log("from files", req.files);
 
   const filePath = req.files.map((file) => file.path);
-  const updateresult = await uploadMultipleImages(filePath, "uploads");
+  const updateresult = await uploadMultipleFiles(filePath, "uploads");
 
   req.files.forEach((file) => {
     fs.unlinkSync(file.path);

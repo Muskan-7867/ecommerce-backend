@@ -19,7 +19,7 @@ const port = 3000;
 
 connectDB();
 const corsOptions = {
-  origin: ["https://omeg-bazaar-client.vercel.app", "http://localhost:5173", "https://omegbazaar.com"],
+  origin: ["https://omeg-bazaar-client.vercel.app", "http://localhost:5173", "https://omegbazaar.com", "http://localhost:3001"],
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   credentials: true,
   optionSuccessStatus: 200,

@@ -140,21 +140,24 @@ async function cleanupTempFiles(filePaths) {
   if (!filePaths) return;
 
   const deletionPromises = filePaths.map((filePath) => {
+    // Ensure we're always cleaning from /public/temp
+    const resolvedPath = path.resolve(filePath);
+
     return new Promise((resolve) => {
-      fs.access(filePath, fs.constants.F_OK, (err) => {
+      fs.access(resolvedPath, fs.constants.F_OK, (err) => {
         if (err) {
-          console.log(`File ${filePath} doesn't exist, skipping deletion`);
+          console.log(`File ${resolvedPath} doesn't exist, skipping deletion`);
           return resolve();
         }
 
-        fs.unlink(filePath, (unlinkErr) => {
+        fs.unlink(resolvedPath, (unlinkErr) => {
           if (unlinkErr) {
             console.warn(
-              `Error deleting temp file ${filePath}:`,
+              `Error deleting temp file ${resolvedPath}:`,
               unlinkErr.message
             );
           } else {
-            console.log(`Successfully deleted temp file: ${filePath}`);
+            console.log(`Successfully deleted temp file: ${resolvedPath}`);
           }
           resolve();
         });
@@ -183,12 +186,14 @@ const getAllProducts = asyncHandler(async (req, res) => {
 });
 
 const getFilteredProducts = asyncHandler(async (req, res) => {
-  const maxPrice = Number(req.params.maxPrice) || 100000000;
-  const minPrice = Number(req.params.minPrice) || 0;
-  const limit = Number(req.params.limit) || 9;
-  const page = Number(req.params.page) || 1;
-  const categoryId = req.params.category || "all";
-  const search = req.params.search;
+  // Use only query parameters
+  const maxPrice = Number(req.query.maxPrice) || 100000000;
+  const minPrice = Number(req.query.minPrice) || 0;
+  const limit = Number(req.query.limit) || 9;
+  const page = Number(req.query.page) || 1;
+  const categoryId = req.query.category || "all";
+  const search = req.query.search;
+  
   const filter = {
     price: { $gte: minPrice, $lte: maxPrice }
   };
@@ -197,9 +202,10 @@ const getFilteredProducts = asyncHandler(async (req, res) => {
     filter.category = categoryId;
   }
 
-  if (search && !search.startsWith("-")) {
+  if (search && search !== "-" && !search.startsWith("-")) {
     filter.name = { $regex: search, $options: "i" };
   }
+  
   const products = await Product.find(filter)
     .populate("category", "name")
     .skip((page - 1) * limit)
@@ -217,6 +223,7 @@ const getFilteredProducts = asyncHandler(async (req, res) => {
     products
   });
 });
+
 
 //get product by single id
 const getProductsById = asyncHandler(async (req, res) => {

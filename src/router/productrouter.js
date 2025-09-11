@@ -52,10 +52,8 @@ productRouter.post(
 );
 
 productRouter.delete("/delete/:id", deleteProduct);
-productRouter.get(
-  "/get/:limit/:page/:minPrice/:maxPrice/:category/:search",
-  getFilteredProducts
-);
+productRouter.get("/get", getFilteredProducts);
+// productRouter.get("/get/:limit?/:page?/:minPrice?/:maxPrice?/:category?/:search?", getFilteredProducts);
 productRouter.get("/all", getAllProducts);
 productRouter.get("/single/:singleproductid", getProductsById);
 productRouter.put("/update/:id", upload.fields([

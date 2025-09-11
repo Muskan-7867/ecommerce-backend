@@ -26,7 +26,9 @@ const {
   getFilteredProducts,
   getFilteredProductsQuery,
   getProductsById,
-  updateProduct
+  updateProduct,
+  addReview,
+  getProductReviews
 } = require("../controllers/productcontroller.js");
 const upload = require("../middleware/multer.js");
 const { getCartProducts } = require("../controllers/cartcontroller.js");
@@ -40,6 +42,7 @@ const {
   getProductByCategoryId,
   getProductByCategoryName
 } = require("../controllers/categorycontroller.js");
+const { protect } = require("../middleware/protect.js");
 
 const productRouter = express.Router();
 productRouter.post(
@@ -71,5 +74,8 @@ productRouter.get("/admincategories", getAllCategoriesForAdmin);
 productRouter.get("/category/name/:name", getProductByCategoryName);
 productRouter.get("/getquery", getFilteredProductsQuery);
 productRouter.delete("/category/delete/:id", deleteCategory);
+productRouter.post("/:id/reviews", protect, addReview);
+productRouter.get("/:id/reviews", getProductReviews);
+
 
 module.exports = productRouter;

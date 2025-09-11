@@ -18,6 +18,7 @@ const {
   uploadImage
 } = require("../utills/cloudinary.js");
 const mongoose = require("mongoose");
+const path = require("path");
 
 //createproduct
 const createProduct = asyncHandler(async (req, res) => {
@@ -400,6 +401,71 @@ const getFilteredProductsQuery = asyncHandler(async (req, res) => {
   });
 });
 
+const addReview = asyncHandler(async (req, res) => {
+  const { rating, comment } = req.body;
+  const productId = req.params.id;
+
+  const product = await Product.findById(productId);
+
+  if (!product) {
+    return res.status(404).json({ message: "Product not found" });
+  }
+
+  // Check if user already reviewed
+  const alreadyReviewed = product.reviews.find(
+    (r) => r.user.toString() === req.user._id.toString()
+  );
+
+  if (alreadyReviewed) {
+    // update existing review
+    alreadyReviewed.rating = rating;
+    alreadyReviewed.comment = comment;
+  } else {
+    // add new review
+    const review = {
+       user: req.user?._id || "6896f366894a4964331753a3",
+  name: req.user?.name || "Muskan",
+      rating: Number(rating),
+      comment,
+    };
+
+    product.reviews.push(review);
+    product.numReviews = product.reviews.length;
+  }
+
+  // update average rating
+  product.averageRating =
+    product.reviews.reduce((acc, item) => item.rating + acc, 0) /
+    product.reviews.length;
+
+  await product.save();
+
+  res.status(201).json({
+    success: true,
+    message: "Review added/updated successfully",
+    reviews: product.reviews,
+    averageRating: product.averageRating,
+    numReviews: product.numReviews,
+  });
+});
+
+const getProductReviews = asyncHandler(async (req, res) => {
+  const productId = req.params.id;
+
+  const product = await Product.findById(productId);
+
+  if (!product) {
+    return res.status(404).json({ success: false, message: "Product not found" });
+  }
+
+  res.status(200).json({
+    success: true,
+    reviews: product.reviews, // returns array of reviews
+    numReviews: product.numReviews,
+    averageRating: product.averageRating,
+  });
+});
+
 module.exports = {
   createProduct,
   getAllProducts,
@@ -407,5 +473,7 @@ module.exports = {
   getProductsById,
   deleteProduct,
   updateProduct,
-  getFilteredProductsQuery
+  getFilteredProductsQuery,
+  addReview,
+  getProductReviews,
 };

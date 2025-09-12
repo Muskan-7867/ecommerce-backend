@@ -58,6 +58,7 @@ const productSchema = new mongoose.Schema(
     deliveryCharges: {
       type: Number
     },
+    slug: { type: String, unique: true, required: true },
     reviews: [
       {
         user: {
@@ -71,9 +72,12 @@ const productSchema = new mongoose.Schema(
       }
     ],
     numReviews: { type: Number, default: 0 },
-    averageRating: { type: Number, default: 0 }
+    averageRating: { type: Number, default: 0 },
+    
   },
   { timestamps: true }
 );
+
+
 const Product = mongoose.model("Product", productSchema);
 module.exports = Product;

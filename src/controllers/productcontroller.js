@@ -26,12 +26,17 @@ const createProduct = asyncHandler(async (req, res) => {
     name,
     description,
     price,
+    slug,
     features,
     originalPrice,
     category,
     inStock,
     deliveryCharges
   } = req.body;
+
+  if (!slug) {
+      slug = slugify(name, { lower: true, strict: true });
+    }
 
   if (!name || !description || !price || !features) {
     return res
@@ -76,6 +81,7 @@ const createProduct = asyncHandler(async (req, res) => {
       name,
       description,
       price,
+      slug,
       features,
       images: uploadedImages,
       videos: uploadedVideos,
@@ -244,6 +250,27 @@ const getProductsById = asyncHandler(async (req, res) => {
   });
 });
 
+const getProductBySlug = asyncHandler(async (req, res) => {
+  const { slug } = req.params;
+
+  const product = await Product.findOne({ slug });
+  console.log("from get", product);
+
+  if (!product) {
+    return res.status(404).json({
+      success: false,
+      message: "Product not Found",
+    });
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "Product fetched successfully",
+    product,
+  });
+});
+
+
 //deleteProduct
 const deleteProduct = asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -278,6 +305,7 @@ const updateProduct = asyncHandler(async (req, res) => {
     features,
     inStock,
     category,
+    slug,
     deliveryCharges,
   } = req.body;
 
@@ -291,7 +319,7 @@ const updateProduct = asyncHandler(async (req, res) => {
   }
 
   // Update text fields
-  product.name = name || product.name;
+
   product.description = description || product.description;
   product.price = price || product.price;
   product.features = features || product.features;
@@ -301,7 +329,7 @@ const updateProduct = asyncHandler(async (req, res) => {
     deliveryCharges !== undefined
       ? deliveryCharges
       : product.deliveryCharges;
-
+  product.slug = slug || product.slug;
   // Handle file uploads (multer puts them in req.files)
   if (req.files) {
     // Handle images
@@ -476,4 +504,5 @@ module.exports = {
   getFilteredProductsQuery,
   addReview,
   getProductReviews,
+  getProductBySlug
 };

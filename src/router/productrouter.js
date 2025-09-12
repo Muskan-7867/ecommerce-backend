@@ -28,7 +28,8 @@ const {
   getProductsById,
   updateProduct,
   addReview,
-  getProductReviews
+  getProductReviews,
+  getProductBySlug
 } = require("../controllers/productcontroller.js");
 const upload = require("../middleware/multer.js");
 const { getCartProducts } = require("../controllers/cartcontroller.js");
@@ -76,6 +77,7 @@ productRouter.get("/getquery", getFilteredProductsQuery);
 productRouter.delete("/category/delete/:id", deleteCategory);
 productRouter.post("/:id/reviews", protect, addReview);
 productRouter.get("/:id/reviews", getProductReviews);
+productRouter.get("/slug/:slug", getProductBySlug);
 
 
 module.exports = productRouter;

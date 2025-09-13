@@ -34,9 +34,7 @@ const createProduct = asyncHandler(async (req, res) => {
     deliveryCharges
   } = req.body;
 
-  if (!slug) {
-      slug = slugify(name, { lower: true, strict: true });
-    }
+ 
 
   if (!name || !description || !price || !features) {
     return res

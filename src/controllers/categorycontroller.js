@@ -56,7 +56,7 @@ const getAllCategoriesForUser = asyncHandler(async (req, res) => {
   return res.status(200).json({
     success: true,
     message: "All Categories are fetched successfully",
-    categories
+    categories: categories || []
   });
 });
 

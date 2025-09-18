@@ -96,7 +96,7 @@ const getAdminInfo = async (req, res) => {
   }
 
   try {
-    const admin = await Admin.findById(adminId);
+    const admin = await Admin.findById(adminId).select("-password");
     if (!admin) {
       return res.status(404).json({ message: "Admin not found" });
     }

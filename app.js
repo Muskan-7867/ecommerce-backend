@@ -14,20 +14,22 @@ dotenv.config();
 
 const BASE_URL = process.env.VITE_BASE_URL;
 const app = express();
-app.use(express.json());
+
 const port = 3000;
 
 connectDB();
 const corsOptions = {
   origin: ["https://omeg-bazaar-client.vercel.app", "http://localhost:5173", "https://omegbazaar.com", "http://localhost:3001"],
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
   optionSuccessStatus: 200,
-  allowedHeaders: ["Content-Type", "Authorization"]
+
 };
 
 app.use(cors(corsOptions));
 
+app.use(express.json());
 app.use(mainRouter);
 // setInterval(rerunMachine, 60000);
 

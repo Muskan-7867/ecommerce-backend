@@ -82,7 +82,7 @@ const userRegister = asyncHandler(async (req, res) => {
       : "User registered successfully! Welcome email failed to send.",
     token,
     user: {
-      id: user._id,
+      id: user._id, 
       username: user.username,
       email: user.email
     },
@@ -101,6 +101,13 @@ const userLogin = asyncHandler(async (req, res) => {
   if (!user)
     return res.status(400).json({ message: "Invalid email or password." });
 
+  // Check if user is verified
+  if (!user.isVerified) {
+    return res.status(400).json({ 
+      message: "Please verify your email before logging in." 
+    });
+  }
+
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch)
     return res.status(400).json({ message: "Invalid email or password." });
@@ -108,8 +115,6 @@ const userLogin = asyncHandler(async (req, res) => {
   const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET_KEY, {
     expiresIn: "1d"
   });
-
-  console.log("from login", token);
 
   res.status(200).json({
     token,
@@ -121,7 +126,6 @@ const userLogin = asyncHandler(async (req, res) => {
     }
   });
 });
-
 //getuser by token
 const getUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user.id)
@@ -515,10 +519,9 @@ const verifyOtp = asyncHandler(async (req, res) => {
 
     // Hash the password now that we've verified the email
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(user.password, salt);
+   
 
-    // Update user as verified
-    user.password = hashedPassword;
+
     user.isVerified = true;
     user.otp = undefined;
     user.otpExpires = undefined;

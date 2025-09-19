@@ -41,7 +41,10 @@ const {
   getAllCategoriesForUser,
   getCategory,
   getProductByCategoryId,
-  getProductByCategoryName
+  getProductByCategoryName,
+  updateCategory,
+  getProductByCategorySlug,
+  getRelatedProductsByCategorySlug
 } = require("../controllers/categorycontroller.js");
 const { protect } = require("../middleware/protect.js");
 
@@ -72,12 +75,17 @@ productRouter.get("/usercategories", getAllCategoriesForUser);
 productRouter.get("/categories", getAllCategories);
 productRouter.get("/category/:categoryId", getCategory);
 productRouter.get("/admincategories", getAllCategoriesForAdmin);
-productRouter.get("/category/name/:name", getProductByCategoryName);
+productRouter.get("/category/slug/:slug", getProductByCategorySlug);
 productRouter.get("/getquery", getFilteredProductsQuery);
 productRouter.delete("/category/delete/:id", deleteCategory);
 productRouter.post("/:id/reviews", protect, addReview);
 productRouter.get("/:id/reviews", getProductReviews);
 productRouter.get("/slug/:slug", getProductBySlug);
+productRouter.get("/categoryslug/:slug", getRelatedProductsByCategorySlug);
+
+
+
+productRouter.put("/category/:id", upload.array("images", 4), updateCategory);
 
 
 module.exports = productRouter;
